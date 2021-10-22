@@ -1,3 +1,4 @@
 *.cmi
 *.cmo
 .vscode/
+_build/
