@@ -17,7 +17,7 @@ val empty_sigma: sigma
 type ide_stacks = Ide_stacks of (string * int list) list
 type if_stack = If_stack of bool list
 type while_stack = While_stack of bool list
-type delta = Delta of ide_stacks * if_stack * while_stack;;
+type delta = Delta of ide_stacks * if_stack * while_stack
 
 val push_ide : delta -> string -> int -> delta
 val top_ide : delta -> string -> int
@@ -32,3 +32,13 @@ val top_while : delta -> bool
 val pop_while : delta -> delta
 
 val empty_delta : delta
+
+
+type prg_state = Pstate of sigma * delta
+
+val get_sigma : prg_state -> sigma
+val get_delta : prg_state -> delta
+val set_sigma : sigma -> prg_state -> prg_state
+val set_delta : delta -> prg_state -> prg_state
+
+val empty_state : prg_state

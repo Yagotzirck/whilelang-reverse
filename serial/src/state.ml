@@ -204,3 +204,19 @@ let pop_while (d : delta) : delta =
       Delta(ide_stks, if_stk, updated_while_stk);;
 
 let empty_delta = Delta(Ide_stacks [], If_stack [], While_stack []);;
+
+(***************** prg_state *****************)
+(* This type is nothing more than a pair including sigma and delta. *)
+
+type prg_state = Pstate of sigma * delta;;
+let get_sigma = function
+  | Pstate (s, _) -> s;;
+let get_delta = function
+  | Pstate (_, d) -> d;;
+
+let set_sigma s = function
+  | Pstate (_, d) -> Pstate (s, d);;
+let set_delta d = function
+  | Pstate (s, _) -> Pstate (s, d);;
+
+let empty_state = Pstate (empty_sigma, empty_delta);;
