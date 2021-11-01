@@ -1,0 +1,57 @@
+; Main program
+(executable
+  (name whilelang_main)
+  (modules Whilelang_main) 
+  (libraries interpreter state augment ast_aug ast print_state)
+)
+
+
+; Unit tests
+
+(executable
+ (name test_interpreter)
+ (modules Test_interpreter)
+ (libraries ounit2 interpreter augment state ast_aug ast)
+)
+
+(executable
+ (name test_state)
+ (modules Test_state)
+ (libraries ounit2 state ast))
+
+ ; Libraries
+
+ (library
+  (name print_state)
+  (modules Print_state )
+  (libraries ast_aug state)
+)
+
+ (library
+  (name interpreter)
+  (modules Interpreter)
+  (libraries augment state ast_aug ast)
+)
+
+(library
+  (name augment)
+  (modules Augment)
+  (libraries ast ast_aug state)
+)
+
+(library
+  (name state)
+  (modules State)
+  (libraries ast ast_aug)
+)
+
+(library
+  (name ast_aug)
+  (modules Ast_aug)
+  (libraries ast)
+)
+
+(library
+  (name ast)
+  (modules Ast)
+)
