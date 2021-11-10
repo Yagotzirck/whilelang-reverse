@@ -30,7 +30,7 @@ stmt =
   | Assign of int_expr * int_expr (* Destructive assignment; 1st int_expr must be a Val *)
 
   (* Cop (constructive assignments on variables: "+=" and "-=") *)
-  | Cadd of int_expr * int_expr (* Must check about 1st int_expr being a Val *)
+  | Cadd of int_expr * int_expr (* 1st int_expr must be a Val *)
   | Csub of int_expr * int_expr (* Same as above *)
 
   | Ifthenelse of bool_expr * program * program

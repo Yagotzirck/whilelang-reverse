@@ -55,8 +55,8 @@ let test_state = "Test suite for State module" >::: [
 "sigma_increment" >:: (fun _ -> assert_equal sigma_inc_result (increment sigma_two_vars "Y" 25));
 "sigma_decrement" >:: (fun _ -> assert_equal sigma_dec_result (decrement sigma_two_vars "X" 3));
 
-"sigma_inc_unbound_var" >:: (fun _ -> assert_raises (exc_create_unbound_var "Z") (fun () -> increment sigma_two_vars "Z" 30));
-"sigma_dec_unbound_var" >:: (fun _ -> assert_raises (exc_create_unbound_var "Z") (fun () -> decrement sigma_two_vars "Z" 30));
+"sigma_inc_unbound_var" >:: (fun _ -> assert_raises (exc_unbound_var "Z") (fun () -> increment sigma_two_vars "Z" 30));
+"sigma_dec_unbound_var" >:: (fun _ -> assert_raises (exc_unbound_var "Z") (fun () -> decrement sigma_two_vars "Z" 30));
 
 (****** delta tests ******)
 

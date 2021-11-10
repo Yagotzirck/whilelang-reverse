@@ -313,6 +313,8 @@ let state_set_sigma s = function
 let state_set_delta d = function
   | Pstate (p, s, _) -> Pstate (p, s, d);;
 
+let state_init prg sigma =
+  Pstate (prg, sigma, empty_delta);;
 
 let state_prepend_stmt stmt = function
   | Pstate (p, s, d) -> Pstate (prg_prepend_stmt stmt p, s, d);;

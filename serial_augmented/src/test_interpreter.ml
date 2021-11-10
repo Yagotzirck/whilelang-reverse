@@ -41,15 +41,15 @@ let prg_fib =
 
       Program(Skip, Program_empty)),
   
-  Program(
-    While (Gt (Sub (Val "N", Eint 2), Eint 0),
-      Program(Assign (Val "Z", Val "X"),
-      Program(Assign (Val "X", Val "Y"),
-      Program(Cadd (Val "Y", Val "Z"),
-      Program(Csub (Val "N", Eint 1),
-      Program_empty))))),
-  Program_empty
-  )
+    Program(
+      While (Gt (Sub (Val "N", Eint 2), Eint 0),
+        Program(Assign (Val "Z", Val "X"),
+        Program(Assign (Val "X", Val "Y"),
+        Program(Cadd (Val "Y", Val "Z"),
+        Program(Csub (Val "N", Eint 1),
+        Program_empty))))),
+    Program_empty
+    )
   );;
 
   let prg_fib_initial_sigma = 

@@ -50,17 +50,29 @@ let prg_fib =
  let sum_prg_start = Pstate (aug_prg prg_sum_1_to_n, Sigma ( ("acc", -1), Sigma (("i", -1), Sigma_empty)), empty_delta);;
 let fib_prg_start = prg_fib_initial_state;;
 
-let rec exec_prg prg =
-  print_state prg;
+let rec exec_prg prg_state =
+  print_state prg_state;
   print_string "\n\n\n\n\nSteps (0 to finish): ";
 
   let steps = read_int() in
   if steps <> 0 then
-    exec_prg (sem_prg_steps prg steps)
+    exec_prg (sem_prg_steps prg_state steps)
   else
     ();;
 
+let open_arg_file =
+  match Sys.argv with
+    | [| _; filename |] ->
+      open_in filename
+    
+    | _ ->
+      Printf.eprintf "Usage: whilelang_main <source file>\n";
+      exit 1;;
 
 
 let main =
-  exec_prg sum_prg_start;;
+  let in_ch = open_arg_file in
+  let lexbuf = Lexing.from_channel in_ch in
+  let prg_sigma = close_in in_ch; Lexer_parser.Parser.prg_state Lexer_parser.Lexer.read lexbuf in
+  match prg_sigma with
+    | (p, s) -> exec_prg (state_init (aug_prg p) s);;
