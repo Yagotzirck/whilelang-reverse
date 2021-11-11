@@ -73,6 +73,7 @@ let open_arg_file =
 let main =
   let in_ch = open_arg_file in
   let lexbuf = Lexing.from_channel in_ch in
-  let prg_sigma = close_in in_ch; Lexer_parser.Parser.prg_state Lexer_parser.Lexer.read lexbuf in
+  let prg_sigma = Lexer_parser.Parser.prg_state Lexer_parser.Lexer.read lexbuf in
+  close_in in_ch;
   match prg_sigma with
     | (p, s) -> exec_prg (state_init (aug_prg p) s);;
