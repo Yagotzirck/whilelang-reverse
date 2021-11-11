@@ -3,12 +3,15 @@
 *)
 {
         open Parser
+
+        let num_lines = ref 0
 }
 
 (* Identifiers
  * identifiers are named regular expressions, which will be used in the rules section, next.
 *)
-let white = [' ' '\t']+
+let white = [' ' '\t' '\r']+
+let newline = ['\n']
 let digit = ['0'-'9']
 let int = '-'? digit+
 let letter = ['a'-'z' 'A'-'Z']
@@ -29,6 +32,7 @@ let id = letter alnum_underscore*
 rule read =
         parse
         | white { read lexbuf }
+        | newline { incr num_lines; Printf.printf "Source line %d has been parsed\n" !num_lines; read lexbuf }
         | "true" { TRUE }
         | "false" { FALSE }
         | ">" { GT }
@@ -44,7 +48,7 @@ rule read =
         | "else" { ELSE }
         | "while" { WHILE }
         | "do" { DO }
-        | "SKIP" { SKIP }
+        | "skip" { SKIP }
         | ";" { SEMICOLON }
         | "sigmadef" { SIGMADEF }
         | "end" { END }
