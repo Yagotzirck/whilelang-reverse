@@ -4,7 +4,11 @@
 {
         open Parser
 
-        let num_lines = ref 0
+        exception SyntaxError of string;;
+        let exc_syntax_err num_line ch =
+                SyntaxError (Printf.sprintf "Unexpected char at line %d: \'%s\'" num_line ch);;
+
+        let curr_line = ref 1;;
 }
 
 (* Identifiers
@@ -32,13 +36,14 @@ let id = letter alnum_underscore*
 rule read =
         parse
         | white { read lexbuf }
-        | newline { incr num_lines; Printf.printf "Source line %d has been parsed\n" !num_lines; read lexbuf }
+        | newline { Printf.printf "Source line %d has been parsed\n" !curr_line; incr curr_line; read lexbuf }
         | "true" { TRUE }
         | "false" { FALSE }
         | ">" { GT }
         | "!" { NOT }
         | "&&" { AND }
-        | "=" { EQ }
+        | "==" {EQ}
+        | "=" { ASSIGN }
         | "+" { PLUS }
         | "-" { MINUS }
         | "(" { LPAREN }
@@ -54,4 +59,5 @@ rule read =
         | "end" { END }
         | id { ID (Lexing.lexeme lexbuf) }
         | int { INT (int_of_string (Lexing.lexeme lexbuf)) }
+        | _ { raise (exc_syntax_err !curr_line (Lexing.lexeme lexbuf) ) }
         | eof { EOF }
