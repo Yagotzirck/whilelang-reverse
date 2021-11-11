@@ -1,0 +1,21 @@
+sigmadef
+	X = 4;
+	Y = 3;
+	Z = 0;
+	N = 5;
+end
+
+if X > Y then
+	Z = Y;
+	Y = X;
+	X = Z;
+else
+	skip
+end
+
+while N - 2 > 0 do
+	Z = X;
+	X = Y;
+	Y += Z;
+	N -= 1;
+end
