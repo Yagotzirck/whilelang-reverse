@@ -20,12 +20,13 @@
 %token          TRUE
 %token          FALSE
 %token          NOT
-(* Besides integer equality check, EQ is also used for assignment; its meaning is given by context *)
 %token          EQ
 %token          GT
 %token          AND
 
 (* program tokens *)
+%token          ASSIGN
+
 %token          IF
 %token          THEN
 %token          ELSE
@@ -77,7 +78,7 @@ prg_state:
 
 prod_sigma:
         | (* empty *) { Sigma_empty }
-        | x = ID; EQ; i = INT; SEMICOLON; next_var = prod_sigma { Sigma ((x, i), next_var) }
+        | x = ID; ASSIGN; i = INT; SEMICOLON; next_var = prod_sigma { Sigma ((x, i), next_var) }
         ;
 
 
@@ -101,9 +102,9 @@ prod_bool_expr:
 
 prod_stmt:
         | SKIP { Skip }
-        | x = ID; EQ; e = prod_int_expr; SEMICOLON { Assign (Val x, e) }
-        | x = ID; PLUS; EQ; e = prod_int_expr; SEMICOLON { Cadd (Val x, e) }
-        | x = ID; MINUS; EQ; e = prod_int_expr; SEMICOLON { Csub (Val x, e) }
+        | x = ID; ASSIGN; e = prod_int_expr; SEMICOLON { Assign (Val x, e) }
+        | x = ID; PLUS; ASSIGN; e = prod_int_expr; SEMICOLON { Cadd (Val x, e) }
+        | x = ID; MINUS; ASSIGN; e = prod_int_expr; SEMICOLON { Csub (Val x, e) }
         | IF; bexp = prod_bool_expr; THEN; p1 = prod_prg; ELSE; p2 = prod_prg; END { Ifthenelse (bexp, p1, p2) }
         | WHILE; bexp = prod_bool_expr; DO; while_block = prod_prg; END { While (bexp, while_block) }
         ;
