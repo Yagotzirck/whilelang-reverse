@@ -4,8 +4,12 @@ open Ast
 open Ast_aug
 open State
 
+(** Raised whenever a [While] or an [If] variant contains an empty program. *)
 exception Empty_if_while_block;;
+
+(** Raised if the program to be augmented is empty. *)
 exception Empty_prg_block;;
+
 
 (** Augment a program contained inside an [If] variant.
 
@@ -55,11 +59,12 @@ let aug_if_block if_bool_value if_prg prg  =
       - The boolean expression of the containing [While] variant;
       - the outside program having as the current statement the statement coming after
         the [While] statement containing this block
+    
     is placed as the last statement of the program inside the [While] block: this serves
     the same goal as the [While_start] variant, in a specular way.
 
     [While_end] contains [While]'s boolean expression because it must be re-evaluated at
-    the beginning of every iteration during forward execution to decide whether to continue
+    the end of every iteration during forward execution to decide whether to continue
     iterating or not; on the other hand, [While_start] doesn't need it, because
     reverse execution pops boolean elements from delta's [If_stack] to determine
     how many iterations must be performed.
@@ -94,6 +99,7 @@ let rec aug_if_while_in_list (prg : program) : program_aug =
 
     All statements are unaffected, except for [Ifthenelse] and [While] which contain program blocks
     which must be recursively augmented as well.
+
     Unlike the main program, [If_start]/[If_end] and [While_start]/[While_end] boundaries aren't put
     at this stage; instead, they get added at runtime, since they all contain the containing augmented
     program as a parameter (which hasn't been fully constructed yet at this stage).

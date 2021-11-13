@@ -1,4 +1,4 @@
-(* Abstract syntax tree for the serial version of the while language. *)
+(** Abstract syntax tree for the serial version of the while language. *)
 
 type ide = string;;
 
@@ -27,11 +27,11 @@ and
 
 stmt =
   | Skip
-  | Assign of int_expr * int_expr (* Destructive assignment; 1st int_expr must be a Val *)
+  | Assign of int_expr * int_expr (** Destructive assignment ("="); 1st int_expr must be a Val *)
 
   (* Cop (constructive assignments on variables: "+=" and "-=") *)
-  | Cadd of int_expr * int_expr (* Must check about 1st int_expr being a Val *)
-  | Csub of int_expr * int_expr (* Same as above *)
+  | Cadd of int_expr * int_expr (** Constructive assignment ("+="); must check about 1st int_expr being a Val *)
+  | Csub of int_expr * int_expr (** Constructive assignment ("-="); must check about 1st int_expr being a Val *)
 
   | Ifthenelse of bool_expr * program * program
   | While of bool_expr * program;;
