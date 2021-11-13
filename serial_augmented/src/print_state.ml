@@ -6,58 +6,58 @@ open Printf
 
 
 let print_program prg =
-  let print_stmt_assign e1 e2 str_to_append =
+  let print_stmt_assign e1 e2 =
     match e1, e2 with
-      | Val i, Val j ->       printf "Assign (%s, %s)%s" i j  str_to_append
-      | Val i, Eint n ->      printf "Assign (%s, %d)%s" i n  str_to_append
-      | Val i, Add (_, _) ->  printf "Assign (%s, Add())%s" i str_to_append
-      | Val i, Sub (_, _) ->  printf "Assign (%s, Sub())%s" i str_to_append
-      | _, _ ->               printf "Assign (invalid format: assignment to non-var)%s" str_to_append
+      | Val i, Val j ->       printf "Assign (%s, %s)" i j
+      | Val i, Eint n ->      printf "Assign (%s, %d)" i n
+      | Val i, Add (_, _) ->  printf "Assign (%s, Add())" i
+      | Val i, Sub (_, _) ->  printf "Assign (%s, Sub())" i
+      | _, _ ->               print_string "Assign (invalid format: assignment to non-var)"
   in
   
-  let print_stmt_cadd e1 e2 str_to_append =
+  let print_stmt_cadd e1 e2 =
     match e1, e2 with
-      | Val i, Val j ->       printf "Cadd (%s, %s)%s" i j str_to_append
-      | Val i, Eint n ->      printf "Cadd (%s, %d)%s" i n str_to_append
-      | Val i, Add (_, _) ->  printf "Cadd (%s, Add())%s" i str_to_append
-      | Val i, Sub (_, _) ->  printf "Cadd (%s, Sub())%s" i str_to_append
-      | _, _ ->               printf "Cadd (invalid format: assignment to non-var)%s" str_to_append
+      | Val i, Val j ->       printf "Cadd (%s, %s)" i j
+      | Val i, Eint n ->      printf "Cadd (%s, %d)" i n
+      | Val i, Add (_, _) ->  printf "Cadd (%s, Add())" i
+      | Val i, Sub (_, _) ->  printf "Cadd (%s, Sub())" i
+      | _, _ ->               print_string "Cadd (invalid format: assignment to non-var)"
   in
   
-  let print_stmt_csub e1 e2 str_to_append =
+  let print_stmt_csub e1 e2 =
     match e1, e2 with
-      | Val i, Val j ->       printf "Csub (%s, %s)%s" i j str_to_append
-      | Val i, Eint n ->      printf "Csub (%s, %d)%s" i n str_to_append
-      | Val i, Add (_, _) ->  printf "Csub (%s, Add())%s" i str_to_append
-      | Val i, Sub (_, _) ->  printf "Csub (%s, Sub())%s" i str_to_append
-      | _, _ ->               printf "Csub (invalid format: assignment to non-var)%s" str_to_append
+      | Val i, Val j ->       printf "Csub (%s, %s)" i j
+      | Val i, Eint n ->      printf "Csub (%s, %d)" i n
+      | Val i, Add (_, _) ->  printf "Csub (%s, Add())" i 
+      | Val i, Sub (_, _) ->  printf "Csub (%s, Sub())" i
+      | _, _ ->               print_string "Csub (invalid format: assignment to non-var)"
   in
   
 
-  let print_stmt str_to_append = function
-    | Program_start -> printf "Program_start%s" str_to_append
-    | Program_end -> printf "Program_end%s" str_to_append
-    | Skip -> printf "Skip%s" str_to_append
-    | Assign (e1, e2) -> print_stmt_assign e1 e2 str_to_append
-    | Cadd (e1, e2) -> print_stmt_cadd e1 e2 str_to_append
-    | Csub (e1, e2) -> print_stmt_csub e1 e2 str_to_append
-    | Ifthenelse (_, _, _) ->  printf "Ifthenelse ()%s" str_to_append
-    | If_start _ -> printf "If_start ()%s" str_to_append
-    | If_end (_, _) -> printf "If_end ()%s" str_to_append
-    | While (_, _) -> printf "While ()%s" str_to_append
-    | While_start (_) -> printf "While_start ()%s" str_to_append
-    | While_end (_, _) -> printf "While_end ()%s" str_to_append
+  let print_stmt = function
+    | Program_start -> print_string "Program_start"
+    | Program_end -> print_string "Program_end"
+    | Skip -> print_string "Skip"
+    | Assign (e1, e2) -> print_stmt_assign e1 e2
+    | Cadd (e1, e2) -> print_stmt_cadd e1 e2
+    | Csub (e1, e2) -> print_stmt_csub e1 e2
+    | Ifthenelse (_, _, _) ->  print_string "Ifthenelse ()"
+    | If_start _ -> print_string "If_start ()"
+    | If_end (_, _) -> print_string "If_end ()"
+    | While (_, _) -> print_string "While ()"
+    | While_start (_) -> print_string "While_start ()"
+    | While_end (_, _) -> print_string "While_end ()"
   in
 
   let rec print_prg_list = function
     | [] -> ()
-    | h :: t -> print_stmt "\n" h; print_prg_list t
+    | h :: t -> print_stmt h; print_newline (); print_prg_list t
   in
 
   match prg with
     Program_aug (prev_stmts, curr_stmt, next_stmts) ->
       print_prg_list (List.rev prev_stmts);
-      print_string ">>>>>>>>>> "; print_stmt " <<<<<<<<<<\n" curr_stmt;
+      print_string ">>>>>>>>>> "; print_stmt curr_stmt; print_string " <<<<<<<<<<\n";
       print_prg_list next_stmts;;
 
 (************************************************************** Sigma *************************************************************)
