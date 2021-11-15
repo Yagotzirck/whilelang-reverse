@@ -1,6 +1,5 @@
 open Ast
 open Ast_aug
-open Program
 open Sigma
 open Delta
 open State 
