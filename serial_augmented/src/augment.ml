@@ -2,7 +2,6 @@
 
 open Ast
 open Ast_aug
-open State
 
 (** Raised whenever a [While] or an [If] variant contains an empty program. *)
 exception Empty_if_while_block;;
@@ -40,7 +39,7 @@ exception Empty_prg_block;;
 @param prg The program containing the [If] variant under examination.
 @return The augmented [If] program block. *)
 let aug_if_block if_bool_value if_prg prg  =
-  prg_prepend_stmt (If_start prg) (prg_append_stmt (If_end ((prg_next_stmt prg), if_bool_value)) if_prg);;
+  Program.prepend_stmt (If_start prg) (Program.append_stmt (If_end ((Program.next_stmt prg), if_bool_value)) if_prg);;
 
 (** Augment a program contained inside a [While] block.
 
@@ -75,8 +74,8 @@ let aug_if_block if_bool_value if_prg prg  =
 @return The augmented [While] program block. *)
 let aug_while_block while_bool_expr while_prg while_in_outer_prg =
   let stmt_to_prepend = While_start (while_in_outer_prg) in
-  let stmt_to_append = While_end (while_bool_expr, while_in_outer_prg |> prg_next_stmt) in
-  prg_prepend_stmt stmt_to_prepend (prg_append_stmt stmt_to_append while_prg);;
+  let stmt_to_append = While_end (while_bool_expr, while_in_outer_prg |> Program.next_stmt) in
+  Program.prepend_stmt stmt_to_prepend (Program.append_stmt stmt_to_append while_prg);;
 
 
 (** Augment a program inside an [If] or [While] block.
@@ -85,7 +84,7 @@ let aug_while_block while_bool_expr while_prg while_in_outer_prg =
 let rec aug_if_while_in_list (prg : program) : program_aug = 
   let rec create_list = function
     | Program_empty -> []
-    | Program(stmt, prg_n) -> (aug_stmt stmt) :: create_list prg_n
+    | Program(stmt, prg_next) -> (aug_stmt stmt) :: create_list prg_next
   in
   let create_prg = function
   | [] -> raise Empty_if_while_block
@@ -127,10 +126,10 @@ and aug_stmt (s : stmt) : stmt_aug =
 and aug_prg (prg: program) : program_aug =
   let rec create_list = function
     | Program_empty -> []
-    | Program(stmt, prg_n) -> (aug_stmt stmt) :: create_list prg_n
+    | Program(stmt, prg_next) -> (aug_stmt stmt) :: create_list prg_next
   in
-  let create_prg = function
+  let create_aug_prg = function
   | [] -> raise Empty_prg_block
   | h :: t -> Program_aug (Program_start :: [], h, t @ [Program_end])
   in
-  create_list prg |> create_prg;;
+  create_list prg |> create_aug_prg;;

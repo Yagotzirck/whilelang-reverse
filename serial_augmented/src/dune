@@ -16,22 +16,27 @@
 )
 
 (executable
- (name test_state)
- (modules Test_state)
- (libraries ounit2 state ast))
+ (name test_delta)
+ (modules Test_delta)
+ (libraries ounit2 delta ast))
+
+ (executable
+ (name test_sigma)
+ (modules Test_sigma)
+ (libraries ounit2 sigma ast))
 
  ; Libraries
 
  (library
   (name print_state)
   (modules Print_state )
-  (libraries ast_aug state)
+  (libraries ast_aug state program sigma delta)
 )
 
  (library
   (name interpreter)
   (modules Interpreter)
-  (libraries augment state ast_aug ast)
+  (libraries augment state sigma ast_aug ast)
 )
 
 (library
@@ -43,6 +48,24 @@
 (library
   (name state)
   (modules State)
+  (libraries program sigma delta ast ast_aug)
+)
+
+(library
+  (name program)
+  (modules Program)
+  (libraries ast_aug)
+)
+
+(library
+  (name sigma)
+  (modules Sigma)
+  (libraries ast ast_aug)
+)
+
+(library
+  (name delta)
+  (modules Delta)
   (libraries ast ast_aug)
 )
 

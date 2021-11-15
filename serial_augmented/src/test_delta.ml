@@ -1,14 +1,5 @@
 open OUnit2
-open State
-
-
-(* Data for sigma tests *)
-let sigma_one_var = Sigma(("X", 5), Sigma_empty);;
-let sigma_two_vars = Sigma(("X", 5), Sigma(("Y", 76), Sigma_empty));;
-let sigma_two_vars_d_assignment = Sigma(("X", 84), Sigma(("Y", 76), Sigma_empty));;
-
-let sigma_inc_result = Sigma(("X", 5), Sigma(("Y", 101), Sigma_empty));;
-let sigma_dec_result = Sigma(("X", 2), Sigma(("Y", 76), Sigma_empty));;
+open Delta
 
 
 (****** Data for delta tests ******)
@@ -46,17 +37,7 @@ let delta_pop_if_result = Delta (ide_stk, if_stk_pop_result, while_stk);;
 
 
 
-let test_state = "Test suite for State module" >::: [
-"sigma_one_decl" >:: (fun _ -> assert_equal sigma_one_var (dassign Sigma_empty "X" 5));
-"sigma_two_decl" >:: (fun _ -> assert_equal sigma_two_vars (dassign sigma_one_var "Y" 76));
-
-"sigma_destructive_assign" >:: (fun _ -> assert_equal sigma_two_vars_d_assignment (dassign sigma_two_vars "X" 84));
-
-"sigma_increment" >:: (fun _ -> assert_equal sigma_inc_result (increment sigma_two_vars "Y" 25));
-"sigma_decrement" >:: (fun _ -> assert_equal sigma_dec_result (decrement sigma_two_vars "X" 3));
-
-"sigma_inc_unbound_var" >:: (fun _ -> assert_raises (exc_unbound_var "Z") (fun () -> increment sigma_two_vars "Z" 30));
-"sigma_dec_unbound_var" >:: (fun _ -> assert_raises (exc_unbound_var "Z") (fun () -> decrement sigma_two_vars "Z" 30));
+let test_delta = "Test suite for Delta module" >::: [
 
 (****** delta tests ******)
 
@@ -68,11 +49,11 @@ let test_state = "Test suite for State module" >::: [
 "delta_top_ide1" >:: (fun _ -> assert_equal 1 (top_ide delta_start "A"));
 "delta_top_ide2" >:: (fun _ -> assert_equal 7 (top_ide delta_start "C"));
 
-"delta_top_empty_ide" >:: (fun _ -> assert_raises (exc_ide_stack_empty "Z") (fun () -> top_ide delta_start "Z"));
+"delta_top_empty_ide" >:: (fun _ -> assert_raises (exc_ide_stack_not_found "Z") (fun () -> top_ide delta_start "Z"));
 "delta_top_not_found_ide" >:: (fun _ -> assert_raises (exc_ide_stack_not_found "UndeclaredIde") (fun() -> top_ide delta_start "UndeclaredIde"));
 
 "delta_pop_ide" >:: (fun _ -> assert_equal delta_pop_ide_result (pop_ide delta_start "C"));
-"delta_pop_empty_ide" >:: (fun _ -> assert_raises (exc_ide_stack_empty "Z") (fun () -> pop_ide delta_start "Z"));
+"delta_pop_empty_ide" >:: (fun _ -> assert_raises (exc_ide_stack_not_found "Z") (fun () -> pop_ide delta_start "Z"));
 "delta_pop_not_found_ide" >:: (fun _ -> assert_raises (exc_ide_stack_not_found "UndeclaredIde") (fun() -> top_ide delta_start "UndeclaredIde"));
 
 (* If_stack tests *)
@@ -85,5 +66,7 @@ let test_state = "Test suite for State module" >::: [
 "delta_pop_if" >:: (fun _ -> assert_equal delta_pop_if_result (pop_if delta_start));
 "delta_pop_empty_if" >:: (fun _ -> assert_raises (exc_if_stack_empty) (fun () -> pop_if delta_empty_if));
 
+(* While_stack tests - pretty much the same as If_stack, so this can be skipped *)
+
 ]
-let _ = run_test_tt_main test_state
+let _ = run_test_tt_main test_delta

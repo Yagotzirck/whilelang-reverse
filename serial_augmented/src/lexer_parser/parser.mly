@@ -3,7 +3,7 @@
 *)
 %{
     open Ast
-    open State  (* for sigma type *)
+    open Sigma
 %}
 
 (* Declarations
@@ -53,7 +53,7 @@
 
 
 (* Starting point for parsing the language *)
-%start < (Ast.program * State.sigma) > prg_state
+%start < (Ast.program * Sigma.sigma) > prg_state
 
 
 %% (* End of declarations section *)

@@ -1,6 +1,5 @@
 open Augment
 open Interpreter
-open State
 open Print_state
 
 let rec exec_prg prg_state =
@@ -37,4 +36,4 @@ let main =
   let prg_sigma = Lexer_parser.Parser.prg_state Lexer_parser.Lexer.read lexbuf in
   close_in in_ch;
   match prg_sigma with
-    | (p, s) -> exec_prg (state_init (aug_prg p) s);;
+    | (p, s) -> exec_prg (State.init (aug_prg p) s);;

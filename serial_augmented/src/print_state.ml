@@ -1,5 +1,8 @@
 open Ast
 open Ast_aug
+open Program
+open Sigma
+open Delta
 open State 
 
 open Printf
@@ -126,7 +129,7 @@ let print_delta delta =
 
 
 let print_state = function
-  | Pstate (prg, sigma, delta) ->
+  | State (prg, sigma, delta) ->
     print_endline "========================= Current program state =========================\n";
 
       print_endline "==================== Program ====================\n";
