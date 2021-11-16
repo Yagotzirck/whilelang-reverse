@@ -11,22 +11,22 @@ let exc_while_stack_empty = Delta_stack_error "while_stack is empty";;
 
 (***************** ide_stacks *****************)
 
-(** [ide_stacks] is a type representing a list of tuples (var_name, prev_values_stack); its goal
+(** [ide_stacks] is a type representing a list of tuples [(var_name, prev_values_stack)]; its goal
     is to keep track of variables' previous values each time a destructive assignment is performed,
     by pushing the older value onto the respective variable's stack before performing the assignment.
-    By doing so, previous values can be retrieved during reverse execution by simply "popping" the value
+    By doing so, previous values of any given variable can be retrieved during reverse execution by simply "popping" the value
     in the head of the list and assigning it to that variable in the sigma store. *)
 type ide_stacks = Ide_stacks of (ide * int list) list;;
 
 
 (** Pushes a value onto the specified [ide_name] variable's stack.
 
-    If a tuple ([ide_name], ide_stack_list) already exists in [ide_stk], [value] is simply prepended to that list
-    (pushed onto that list): ([ide_name], value :: ide_stack_list).
+    If a tuple ([ide_name], [ide_stack_list]) already exists in [ide_stk], [value] is simply prepended to that list
+    (pushed onto that [ide_stack_list]): ([ide_name], [value] :: [ide_stack_list]).
 
-    If a tuple for [ide_name] doesn't exist, a tuple ([ide_name], value :: []) gets created and appended to [ide_stk].
+    If a tuple for [ide_name] doesn't exist, a tuple ([ide_name], [value] :: []) gets created and appended to [ide_stk].
 
-@param  ide_stk The list of tuples (variable_name, variable_name_stack_list).
+@param  ide_stk The list of tuples (variable_name, variable_name_stack_list) representing variables' auxiliary store.
 @param  ide_name The name of the variable which underwent a destructive assignment, for which we want to preserve its
         previous value by pushing it onto its associated stack.
 @param value The previous integer value to push onto the stack associated to [ide_name].
@@ -66,7 +66,7 @@ let private_top_ide ~ide_stk:(ide_stk : ide_stacks) ~ide_name:(ide_name : ide) :
 @param  ide_stk The list of tuples (variable_name, variable_name_stack_list).
 @param  ide_name The name of the variable associated to the stack from which we want to retrieve the integer value
         on its top.
-@return The updated [ide_stk], where the element previously located on top of [ide_name]'s associated stack has been removed.contents
+@return The updated [ide_stk], where the element previously located on top of [ide_name]'s associated stack has been removed.
 
         If [ide_name]'s associated stack contained a single element, the whole ([ide_name], ide_name_stack_list) pair gets removed
         from [ide_stk].
@@ -162,20 +162,18 @@ let private_pop_while ~while_stk:(while_stk : while_stack) : while_stack =
 
 
 (** [delta] is a type representing the auxiliary store, consisting of:
-    -1) A list of stacks [ide_stacks], where each stack is contained inside a pair (<identifier>, <integer list>) that keeps track
+    + A list of stacks [ide_stacks], where each stack is contained inside a pair (<identifier>, <integer list>) that keeps track
     of each variable's value: every time a destructive assignment is performed on a certain <ide> variable, its previous
     value is pushed onto the stack associated to that <ide> variable, in order to preserve it;
-
-    -2) A stack [if_stack], which keeps track of all the boolean values used as tests inside conditional statements
+    + A stack [if_stack], which keeps track of all the boolean values used as tests inside conditional statements
     (that is, [Ifthenelse] statements);
-
-    -3) A stack [while_stack], whick keeps track of all the boolean values used as tests inside [While] loops.
+    + A stack [while_stack], whick keeps track of all the boolean values used as tests inside [While] loops.
 *)
 type delta = Delta of ide_stacks * if_stack * while_stack;;
   
 (* ide_stack interface for delta *)
 
-(** This is a wrapper which applies [private_push_ide] to the parameter [ide_stks] inside the specified
+(** This is a wrapper which applies {!val:private_push_ide} to the parameter [ide_stks] inside the specified
     [d] delta parameter.
 *)
 let push_ide ~d:(d : delta) ~ide_name:(ide_name : ide) ~value:(value : int) : delta =
@@ -184,17 +182,17 @@ let push_ide ~d:(d : delta) ~ide_name:(ide_name : ide) ~value:(value : int) : de
       let updated_ide_stks = private_push_ide ide_stks ide_name value in
       Delta(updated_ide_stks, if_stk, while_stk);;
 
-(** This is a wrapper which applies [private_top_ide] to the parameter [ide_stks] inside the specified
+(** This is a wrapper which applies {!val:private_top_ide} to the parameter [ide_stks] inside the specified
     [d] delta parameter.
 *)
-let top_ide (d : delta) (ide_name : ide) : int =
+let top_ide ~d:(d : delta) ~ide_name:(ide_name : ide) : int =
   match d with
     Delta(ide_stks, _, _) -> private_top_ide ide_stks ide_name;;
 
-(** This is a wrapper which applies [private_pop_ide] to the parameter [ide_stks] inside the specified
+(** This is a wrapper which applies {!val:private_pop_ide} to the parameter [ide_stks] inside the specified
     [d] delta parameter.
 *)
-let pop_ide (d : delta) (ide_name : ide) : delta =
+let pop_ide ~d:(d : delta) ~ide_name:(ide_name : ide) : delta =
   match d with
     Delta(ide_stks, if_stk, while_stk) ->
       let updated_ide_stks = private_pop_ide ide_stks ide_name in
@@ -202,26 +200,26 @@ let pop_ide (d : delta) (ide_name : ide) : delta =
 
 (* if_stack interface for delta *)
 
-(** This is a wrapper which applies [private_push_if] to the parameter [if_stk] inside the specified
+(** This is a wrapper which applies {!val:private_pop_ide} to the parameter [if_stk] inside the specified
     [d] delta parameter.
 *)
-let push_if (d : delta) (value : bool) : delta =
+let push_if ~d:(d : delta) ~(value : bool) : delta =
   match d with
     Delta(ide_stks, if_stk, while_stk) ->
       let updated_if_stk = private_push_if if_stk value in
       Delta(ide_stks, updated_if_stk, while_stk);;
 
-(** This is a wrapper which applies [private_top_if] to the parameter [if_stk] inside the specified
+(** This is a wrapper which applies {!val:private_top_if} to the parameter [if_stk] inside the specified
     [d] delta parameter.
 *)
-let top_if (d : delta) : bool =
+let top_if ~d:(d : delta) : bool =
   match d with
     Delta(_, if_stk, _) -> private_top_if if_stk;;
 
-(** This is a wrapper which applies [private_pop_if] to the parameter [if_stk] inside the specified
+(** This is a wrapper which applies {!val:private_pop_if} to the parameter [if_stk] inside the specified
     [d] delta parameter.
 *)
-let pop_if (d : delta) : delta =
+let pop_if ~d:(d : delta) : delta =
   match d with
     Delta(ide_stks, if_stk, while_stk) ->
       let updated_if_stk = private_pop_if if_stk in
@@ -229,27 +227,27 @@ let pop_if (d : delta) : delta =
 
 (* while_stack interface for delta *)
 
-(** This is a wrapper which applies [private_push_while] to the parameter [while_stk] inside the specified
+(** This is a wrapper which applies {!val:private_push_while} to the parameter [while_stk] inside the specified
     [d] delta parameter.
 *)
-let push_while (d : delta) (value : bool) : delta =
+let push_while ~d:(d : delta) ~value:(value : bool) : delta =
   match d with
     Delta(ide_stks, if_stk, while_stk) ->
       let updated_while_stk = private_push_while while_stk value in
       Delta(ide_stks, if_stk, updated_while_stk);;
 
-(** This is a wrapper which applies [private_top_while] to the parameter [while_stk] inside the specified
+(** This is a wrapper which applies {!val:private_top_while} to the parameter [while_stk] inside the specified
     [d] delta parameter.
 *)
-let top_while (d : delta) : bool =
+let top_while ~d:(d : delta) : bool =
   match d with
     Delta(_, _, while_stk) -> private_top_while while_stk;;
 
 
-(** This is a wrapper which applies [private_pop_while] to the parameter [while_stk] inside the specified
+(** This is a wrapper which applies {!val:private_pop_while} to the parameter [while_stk] inside the specified
     [d] delta parameter.
 *)
-let pop_while (d : delta) : delta =
+let pop_while ~d:(d : delta) : delta =
   match d with
     Delta(ide_stks, if_stk, while_stk) ->
       let updated_while_stk = private_pop_while while_stk in
