@@ -140,14 +140,14 @@ let csub ~e1 ~e2 ~state =
       the "then" branch) is assigned to [if_prg_block] for further processing; otherwise
       ([b]'s evaluation is [false]), [prg2] (the program associated with the "else" branch)
       is assigned to [if_prg_block] for further processing;
-    + The if branch to be executed ([if_prg_block]) gets augmented by calling
+    + [Ifthenelse]'s branch to be executed ([if_prg_block]) gets augmented by calling
       {!val:Augment.aug_if_block} and the augmented program is assigned to [aug_if_prg_block];
     + A new state containing [aug_if_prg_block] as program is returned.
 @param b Ifthenelse's boolean expression, whose evaluation determines whether to execute [prg1] or [prg2].
 @param prg1 The program associated with [Ifthenelse]'s "then" branch.
 @param prg2 The program associated with [Ifthenelse]'s "else" branch.
 @param state The state where the [Ifthenelse] statement under analysis was encountered.
-@return A new state having the augmented [Ifthenelse] branch to execute.
+@return A new state having as program the augmented [Ifthenelse] branch to execute.
 *)
 let if_eval_fwd ~b ~prg1 ~prg2 ~state =
   let b_eval = sem_bool b (State.get_sigma state) in
@@ -159,6 +159,33 @@ let if_eval_fwd ~b ~prg1 ~prg2 ~state =
   let aug_if_prg_block = aug_if_block b_eval if_prg_block prg  in
   State.set_program aug_if_prg_block state;;
 
+(** Evaluates [Ifthenelse] statements during reverse execution.
+
+    The following operations are performed in the given order:
+
+    + [b_eval] ([Ifthenelse]'s boolean evaluation, which was evaluated during reverse execution)
+      is retrieved and removed(popped) from {!type:Delta.if_stack} in the auxiliary delta store;
+    + [new_state] is created by putting the new delta store with [b_eval] removed from the top of {!type:Delta.if_stack},
+      and the program's current statement is moved one statement backward (keep in mind that
+      [sem_stmt_rev] evaluates the {b previous} statement rather than the current one, therefore
+      if we want [Ifthenelse] to become the current statement we must move one step back);
+    + [prg] (The current program where the [Ifthenelse] statement under evaluation is now the current
+      statement) is retrieved from [state];
+    + If the result of [b_eval] is [true], [prg1] (the program associated with
+      the "then" branch) is assigned to [if_prg_block] for further processing; otherwise
+      ([b]'s evaluation is [false]), [prg2] (the program associated with the "else" branch)
+      is assigned to [if_prg_block] for further processing;
+    + [Ifthenelse]'s branch to be executed ([if_prg_block]) gets augmented by calling
+      {!val:Augment.aug_if_block}; the current statement in the augmented program is set to the last one
+      by feeding it to {!val:Program.last_stmt} (we are performing reverse execution, so we must begin
+      from the program's last statement) and the result is assigned to [aug_if_prg_block];
+    + A new state containing [aug_if_prg_block] as program is returned.
+@param prg1 The program associated with [Ifthenelse]'s "then" branch.
+@param prg2 The program associated with [Ifthenelse]'s "else" branch.
+@param state The state where the [Ifthenelse] statement under analysis was encountered.
+@return A new state having as program the augmented [Ifthenelse] branch to execute (starting from the program's last statement),
+        as well as an updated {!type:Delta.if_stack} in the sigma store with the top value removed from the stack.
+*)
 let if_eval_rev prg1 prg2 state =
   let b_eval = State.top_if state in
   let new_state = State.pop_if state |> State.prev_stmt in
@@ -171,30 +198,34 @@ let if_eval_rev prg1 prg2 state =
   State.set_program aug_if_prg_block new_state;;
 
 
-let while_eval b_expr b_eval while_prg state next_prg_when_b_false =
-  let prg = State.get_program state in
-  
-  let prg_to_execute =
-    if b_eval then
-    aug_while_block b_expr while_prg prg
-  else
-    next_prg_when_b_false
-
-  in
-  State.set_program prg_to_execute state;;
 
 let while_eval_fwd b_expr while_prg state =
   let b_eval = sem_bool b_expr (State.get_sigma state) in
   let new_state = State.push_while false state in
-  let next_prg_when_b_false = State.get_program new_state |> Program.next_stmt in
-  while_eval b_expr b_eval while_prg new_state next_prg_when_b_false;;
+  let prg_while_next_stmt = State.get_program new_state |> Program.next_stmt in
+  let outer_prg = State.get_program new_state in
+
+  let prg_to_execute =
+    if b_eval then
+    aug_while_block b_expr while_prg outer_prg
+  else
+    prg_while_next_stmt
+  in
+  State.set_program prg_to_execute new_state;;
 
 let while_eval_rev b_expr while_prg state =
   let b_eval = State.top_while state in
   let new_state = State.pop_while state |> State.prev_stmt in
-  
-  let next_prg_when_b_false = State.get_program new_state |> Program.prev_stmt in
-  while_eval b_expr b_eval while_prg new_state next_prg_when_b_false |> State.last_stmt;;
+  let prg_while_prev_stmt = State.get_program new_state |> Program.prev_stmt in
+  let outer_prg = State.get_program new_state in
+
+  let prg_to_execute =
+    if b_eval then
+    aug_while_block b_expr while_prg outer_prg
+  else
+    prg_while_prev_stmt
+  in
+  State.set_program prg_to_execute new_state |> State.last_stmt;;
 
 let while_start_eval while_stmt_in_outer_prg state =
   let b_eval = State.top_while state in
