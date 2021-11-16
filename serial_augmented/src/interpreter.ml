@@ -30,12 +30,6 @@ let rec sem_bool (expr : bool_expr) (s : Sigma.sigma) : bool =
 
 
 (* Auxiliary functions for sem_stmt and sem_stmt_rev *)
-let update_var (id : ide) exp_value operation state =
-  let curr_sigma = State.get_sigma state in
-  let value = sem_int exp_value curr_sigma in
-  let new_sigma = operation curr_sigma id value in
-  State.set_sigma new_sigma state;;
-
 
 let assign_var_fwd e1 e2 state =
   match e1 with
