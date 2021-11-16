@@ -81,7 +81,7 @@ let print_delta delta =
         | [] -> print_char '\n'
         | h::t -> printf "%-4d\t" h; print_stack t
       in
-      printf "%-10s:\t" ide; print_stack stk
+      printf "%s :\t\t" ide; print_stack stk
 
   in
   match ide_stks with
