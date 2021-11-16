@@ -34,6 +34,7 @@ open Ast
     A [prev_item] operation
       - moves [curr_item] to the head of [next_items] list;
       - moves the head of [prev_items] to [curr_item].
+
     Applying [prev_item] to the last zipper we obtained above yields
 
     [( [2; 1]), 3, [4; 5; 6] )]
@@ -55,11 +56,11 @@ and stmt_aug =
   | Program_start
   | Program_end
   | Skip
-  | Assign of int_expr * int_expr (** Destructive assignment; 1st int_expr must be a Val *)
+  | Assign of int_expr * int_expr (** Destructive assignment; 1st [int_expr] must be {!constructor:Ast.int_expr.Val} *)
 
   (* Cop (constructive assignments on variables: "+=" and "-=") *)
-  | Cadd of int_expr * int_expr (** Constructive assignment ("+="); must check about 1st int_expr being a Val *)
-  | Csub of int_expr * int_expr (** Constructive assignment ("-="); must check about 1st int_expr being a Val *)
+  | Cadd of int_expr * int_expr (** Constructive assignment ("+="); must check about 1st [int_expr] being {!constructor:Ast.int_expr.Val} *)
+  | Csub of int_expr * int_expr (** Constructive assignment ("-="); must check about 1st [int_expr] being {!constructor:Ast.int_expr.Val} *)
 
   | Ifthenelse of bool_expr * program_aug * program_aug
 
