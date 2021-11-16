@@ -1,8 +1,8 @@
 ; Main program
 
 (executable
-  (name whilelang_main)
-  (modules Whilelang_main) 
+  (name whilelang_serial)
+  (modules Whilelang_serial) 
   (libraries lexer_parser interpreter state augment ast_aug ast print_state)
 )
 
