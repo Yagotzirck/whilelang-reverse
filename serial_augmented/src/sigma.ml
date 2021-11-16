@@ -66,19 +66,19 @@ let cassign ~s:(s : sigma) ~ide_name:(ide_name : ide) ~operation:(operation : in
 
     [ide_name] = ([ide_name]'s previous value) + [value].
 
-    This is a mere wrapper for [cassign] specifying what the
+    This is a mere wrapper for {!val:cassign} specifying what the
     [operation] parameter function does.
 *)
   let cadd ~s ~ide_name ~value =
     cassign s ide_name ( (+) value);;
 
   
-  (** Constructive subtraction (+=): subtracts [value] from the value associated to
+  (** Constructive subtraction (-=): subtracts [value] from the value associated to
     [ide_name], and returns the updated [sigma] store where
 
     [ide_name] = ([ide_name]'s previous value) - [value].
   
-  This is a mere wrapper for [cassign] specifying what the
+  This is a mere wrapper for {!val:cassign} specifying what the
     [operation] parameter function does.
 *)
   let csub ~s ~ide_name ~value =
@@ -99,6 +99,3 @@ let rec get_value ~s ~ide_name =
     | Sigma_empty -> raise (exc_unbound_var ide_name)
     | Sigma((i, v), _) when i = ide_name -> v
     | Sigma(_, next) -> get_value next ide_name;;
-
-(** Returns [Sigma_empty] (an empty program store).*)
-let empty_sigma = Sigma_empty;;
