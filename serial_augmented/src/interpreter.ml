@@ -12,15 +12,24 @@ exception Illegal_statement_rev_execution of string;;
 
 
 
-
-let rec sem_int (expr : int_expr) (s : Sigma.sigma) : int =
+(** Integer semantics' definition.
+@param expr The integer expression to evaluate.
+@param s The sigma store (used in case the expression contains variables whose value must be retrieved.)
+@return The integer value resulting from evaluating the expression.
+*)
+let rec sem_int ~expr:(expr : int_expr) ~s:(s : Sigma.sigma) : int =
   match expr with
     | Val (i) -> Sigma.get_value s i
     | Eint (x) -> x
     | Add (e1, e2) -> (sem_int e1 s) + (sem_int e2 s)
     | Sub (e1, e2) -> (sem_int e1 s) - (sem_int e2 s);;
 
-let rec sem_bool (expr : bool_expr) (s : Sigma.sigma) : bool =
+(** Boolean semantics' definition.
+@param expr The boolean expression to evaluate.
+@param s The sigma store (used in case the expression contains variables whose value must be retrieved.)
+@return The boolean value resulting from evaluating the expression.
+*)
+let rec sem_bool ~expr:(expr : bool_expr) ~expr:(s : Sigma.sigma) : bool =
   match expr with
     | Ebool (b) -> b
     | Not (b) -> not (sem_bool b s)
@@ -31,7 +40,21 @@ let rec sem_bool (expr : bool_expr) (s : Sigma.sigma) : bool =
 
 (* Auxiliary functions for sem_stmt and sem_stmt_rev *)
 
-let assign_var_fwd e1 e2 state =
+(** Performs forward execution's destructive assignment:
+
+  + Evaluates [e1], making sure it's a variable;
+  + Evaluates [e2];
+  + Assigns [e2]'s evaluation to the variable specified by [e1],
+    and returns the state with the above changes applied
+    (see {!val:State.dassign_fwd} for details such as pushing the previous value
+    in the delta store before performing the assignment.)
+@param e1 The expression containing the variable to which we must assign the new value.
+@param e2 The expression containing the value to assign.
+@param state The state where the assignment must be performed.
+@return The new state where the assignment has been performed.
+@raise Assignment_to_non_var if [e1]'s evaluation isn't a variable/identifier.
+*)
+let assign_var_fwd ~e1 ~e2 ~state =
   match e1 with
     | Val (i) ->
         let curr_sigma = State.get_sigma state in
@@ -40,12 +63,39 @@ let assign_var_fwd e1 e2 state =
         
     | _ -> raise (Assignment_to_non_var "Assign");;
 
+  
+(** Performs reverse execution's destructive assignment:
+
+  + Evaluates [e1], making sure it's a variable [ide];
+  + Assigns [ide]'s previous value to [ide] and returns the state
+    with the above changes applied
+    (see {!val:State.dassign_rev} for details such as popping [ide]'s previous value from
+    the delta store.)
+@param e1 The expression containing the variable to which we must assign the previous value.
+@param state The state where the assignment must be performed.
+@return The new state where the assignment has been performed.
+@raise Assignment_to_non_var if [e1]'s evaluation isn't a variable/identifier.
+*)
 let assign_var_rev e1 state =
   match e1 with
     | Val (i) -> State.dassign_rev i state
 
     | _ -> raise (Assignment_to_non_var "Assign (reverse execution)");;
 
+
+(** Performs constructive sum:
+
+  + Evaluates [e1], making sure it's a variable;
+  + Evaluates [e2];
+  + Sums [e2]'s evaluation to the variable specified by [e1],
+    and returns the state with the above changes applied
+    (see {!val:State.cadd} for details.)
+@param e1 The expression containing the variable to which we must add [e2]'s evaluation
+@param e2 The expression containing the value to add to the variable specified by [e1].
+@param state The state where the sum must be performed.
+@return The new state where the sum has been performed.
+@raise Assignment_to_non_var if [e1]'s evaluation isn't a variable/identifier.
+*)
 let cadd e1 e2 state =
   match e1 with
   | Val (i) ->
@@ -55,7 +105,21 @@ let cadd e1 e2 state =
     
   | _ -> raise (Assignment_to_non_var "Cadd, or Csub if execution was reversed");;
 
-let csub e1 e2 state =
+  
+(** Performs constructive subtraction:
+
+  + Evaluates [e1], making sure it's a variable;
+  + Evaluates [e2];
+  + Subtracts [e2]'s evaluation from the variable specified by [e1],
+    and returns the state with the above changes applied
+    (see {!val:State.csub} for details.)
+@param e1 The expression containing the variable from which we must subtract [e2]'s evaluation
+@param e2 The expression containing the value to subtract from the variable specified by [e1].
+@param state The state where the subtraction must be performed.
+@return The new state where the subtraction has been performed.
+@raise Assignment_to_non_var if [e1]'s evaluation isn't a variable/identifier.
+*)
+let csub ~e1 ~e2 ~state =
   match e1 with
   | Val (i) ->
         let curr_sigma = State.get_sigma state in
@@ -65,8 +129,27 @@ let csub e1 e2 state =
   | _ -> raise (Assignment_to_non_var "Csub, or Cadd if execution was reversed");;
 
 
+(** Evaluates [Ifthenelse] statements during forward execution.
 
-let if_eval_fwd b prg1 prg2 state =
+    The following operations are performed in the given order:
+
+    + [b] ([Ifthenelse]'s boolean expression) is evaluated;
+    + [prg] (The current program where the [Ifthenelse] statement was encountered)
+    is retrieved from [state];
+    + If the result of [b]'s evaluation is [true], [prg1] (the program associated with
+      the "then" branch) is assigned to [if_prg_block] for further processing; otherwise
+      ([b]'s evaluation is [false]), [prg2] (the program associated with the "else" branch)
+      is assigned to [if_prg_block] for further processing;
+    + The if branch to be executed ([if_prg_block]) gets augmented by calling
+      {!val:Augment.aug_if_block} and the augmented program is assigned to [aug_if_prg_block];
+    + A new state containing [aug_if_prg_block] as program is returned.
+@param b Ifthenelse's boolean expression, whose evaluation determines whether to execute [prg1] or [prg2].
+@param prg1 The program associated with [Ifthenelse]'s "then" branch.
+@param prg2 The program associated with [Ifthenelse]'s "else" branch.
+@param state The state where the [Ifthenelse] statement under analysis was encountered.
+@return A new state having the augmented [Ifthenelse] branch to execute.
+*)
+let if_eval_fwd ~b ~prg1 ~prg2 ~state =
   let b_eval = sem_bool b (State.get_sigma state) in
   let prg = State.get_program state in
   
