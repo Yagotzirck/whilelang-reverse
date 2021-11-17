@@ -70,6 +70,31 @@ let prg_fib =
 
 
 
+(* test for correct execution of While's having false at the 1st iteration *)
+let prg_fib_while_false =
+  Program(
+    Ifthenelse (Gt (Val "X", Val"Y"),
+      Program(Assign (Val "Z", Val "Y"),
+      Program(Assign (Val "Y", Val "X"),
+      Program(Assign (Val "X", Val "Z"),
+      Program_empty))),
+
+      Program(Skip, Program_empty)),
+  
+    Program(
+      While (Ebool false,
+        Program(Assign (Val "Z", Val "X"),
+        Program(Assign (Val "X", Val "Y"),
+        Program(Cadd (Val "Y", Val "Z"),
+        Program(Csub (Val "N", Eint 1),
+        Program_empty))))),
+    Program_empty
+    )
+  );;
+let prg_fib_while_false_initial_state = State.init (aug_prg prg_fib_while_false) (prg_fib_initial_sigma);;
+
+
+
 
 let test_interpreter = "Test suite for Interpreter module" >::: [
 
@@ -84,6 +109,11 @@ let test_interpreter = "Test suite for Interpreter module" >::: [
   "rev_fib_paper" >:: (fun _ ->
     let fib_paper_final_state = sem_prg_fwd prg_fib_initial_state in
     assert_equal prg_fib_initial_state (sem_prg_rev fib_paper_final_state);
+  );
+
+  "rev_fib_while_false" >:: (fun _ ->
+    let fib_while_false_final_state = sem_prg_fwd prg_fib_while_false_initial_state in
+    assert_equal prg_fib_while_false_initial_state (sem_prg_rev fib_while_false_final_state);
   );
 ]
 
