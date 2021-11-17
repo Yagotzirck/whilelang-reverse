@@ -38,7 +38,7 @@ exception Empty_prg_block;;
 @param  if_prg The program contained inside the [Ifthenelse] statement to be augmented.
 @param  prg The program containing the [Ifthenelse] statement under examination, which gets put inside
         [If_start] (as-is, having [Ifthenelse] as the current statement) and [If_end] (setting as the 
-        current statement the statement following [Ifthenelse])].
+        current statement the statement following [Ifthenelse]).
 @return The augmented [Ifthenelse] program block. *)
 let aug_if_block ~if_bool_value ~if_prg ~prg  =
   Program.prepend_stmt (If_start prg) (Program.append_stmt (If_end ((Program.next_stmt prg), if_bool_value)) if_prg);;
@@ -74,7 +74,7 @@ let aug_if_block ~if_bool_value ~if_prg ~prg  =
 @param  while_prg The program contained inside the [While] statement to be augmented.
 @param  while_in_outer_prg The program containing the [While] statement under examination,
         which gets put inside [While_start] (as-is, having [While] as the current statement)
-        and [While_end] (setting as the current statement the statement following [While])].
+        and [While_end] (setting as the current statement the statement following [While]).
 @return The augmented [While] program block. *)
 let aug_while_block ~while_bool_expr ~while_prg ~while_in_outer_prg =
   let stmt_to_prepend = While_start (while_in_outer_prg) in
