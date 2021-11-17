@@ -143,7 +143,7 @@ let csub ~e1 ~e2 ~state =
     + [Ifthenelse]'s branch to be executed ([if_prg_block]) gets augmented by calling
       {!val:Augment.aug_if_block} and the augmented program is assigned to [aug_if_prg_block];
     + A new state containing [aug_if_prg_block] as program is returned.
-@param b Ifthenelse's boolean expression, whose evaluation determines whether to execute [prg1] or [prg2].
+@param b [Ifthenelse]'s boolean expression, whose evaluation determines whether to execute [prg1] or [prg2].
 @param prg1 The program associated with [Ifthenelse]'s "then" branch.
 @param prg2 The program associated with [Ifthenelse]'s "else" branch.
 @param state The state where the [Ifthenelse] statement under analysis was encountered.
@@ -163,14 +163,14 @@ let if_eval_fwd ~b ~prg1 ~prg2 ~state =
 
     The following operations are performed in the given order:
 
-    + [b_eval] ([Ifthenelse]'s boolean evaluation, which was evaluated during reverse execution)
+    + [b_eval] ([Ifthenelse]'s boolean evaluation, which was evaluated during forward execution)
       is retrieved and removed(popped) from {!type:Delta.if_stack} in the auxiliary delta store;
     + [new_state] is created by putting the new delta store with [b_eval] removed from the top of {!type:Delta.if_stack},
-      and the program's current statement is moved one statement backward (keep in mind that
-      [sem_stmt_rev] evaluates the {b previous} statement rather than the current one, therefore
+      and moving the program's current statement one statement backward (keep in mind that
+      {!val:sem_stmt_rev} evaluates the {b previous} statement rather than the current one, therefore
       if we want [Ifthenelse] to become the current statement we must move one step back);
     + [prg] (The current program where the [Ifthenelse] statement under evaluation is now the current
-      statement) is retrieved from [state];
+      statement) is retrieved from [new_state];
     + If the result of [b_eval] is [true], [prg1] (the program associated with
       the "then" branch) is assigned to [if_prg_block] for further processing; otherwise
       ([b]'s evaluation is [false]), [prg2] (the program associated with the "else" branch)
@@ -198,7 +198,35 @@ let if_eval_rev prg1 prg2 state =
   State.set_program aug_if_prg_block new_state;;
 
 
+(** Evaluates [While] statements during forward execution.
 
+    The following operations are performed in the given order:
+
+    + [b_expr] ([While]'s boolean expression) is evaluated and assigned to [b_eval];
+    + [new_state] is created by pushing [false] onto {!type:Delta.while_stack}; this step is necessary
+    since during forward execution we have the following two scenarios:
+      - [While]'s first [b_expr] evaluation was [false] ([While]'s program block was skipped): since no [true]
+      values were pushed onto {!type:Delta.while_stack}, the [false] value we pushed gets popped during reverse
+      execution and [While]'s program block gets skipped again;
+      - [While]'s [b_expr] evaluates to [true] for a given {b n} amount of times; {b n} [true] values get pushed
+      onto {!type:Delta.while_stack}, therefore during reverse execution we pop those [true] values which make the interpreter
+      iterate [While]'s program block {b n} times, at which point the [false] value we pushed gets popped and [While]'s
+      reverse iteration stops.
+    + The program having the statement following the current [While] as the current statement is assigned to
+      [prg_while_next_stmt];
+    + if [b_eval] is [true], it means we must execute the program block inside [While] at least once, therefore
+      [while_prg] gets augmented by calling {!val:Augment.aug_while_block} and assigned to [prg_to_execute]; otherwise
+      ([b_eval] = [false]), [While]'s program block gets skipped and [prg_while_next_stmt] is assigned to [prg_to_execute];
+    + A state having [prg_to_execute] as program and [new_state] as state is returned.
+@param b_expr [While]'s boolean expression.
+@param while_prg The program associated to [While]'s body;
+@param state The state where the [While] statement has been encountered.
+@return A state having:
+        - as a program: the augmented [while_prg] if [b_expr]'s evaluation is [true], or the program having the statement
+          following the [While] under evaluation as current statement if [b_expr]'s evaluation is [false];
+        - as sigma store: the same as the [state] parameter;
+        - as auxiliary delta store: [state]'s delta store, with [false] pushed onto {!type:Delta.while_stack}.
+*)
 let while_eval_fwd b_expr while_prg state =
   let b_eval = sem_bool b_expr (State.get_sigma state) in
   let new_state = State.push_while false state in
@@ -213,19 +241,43 @@ let while_eval_fwd b_expr while_prg state =
   in
   State.set_program prg_to_execute new_state;;
 
+
+(** Evaluates [While] statements during reverse execution.
+
+    The following operations are performed in the given order:
+
+    + The boolean value on the top of {!type:Delta.while_stack} gets retrieved and assigned to [b_eval];
+    + [new_state] is created from [state] by removing (popping) {!type:Delta.while_stack}'s top value and setting as the current statement
+      the [While] statement (keep in mind that {!val:sem_stmt_rev} evaluates the {b previous} statement rather than the current one, therefore
+      if we want [While] to become the current statement we must move one step back);
+    + The program having the statement preceding the current [While] as the current statement is assigned to
+      [prg_while_prev_stmt];
+    + if [b_eval] is [true], it means we must execute the program block inside [While] at least once, therefore
+      [while_prg] gets augmented by calling {!val:Augment.aug_while_block} and assigned to [prg_to_execute]; otherwise
+      ([b_eval] = [false]), [While]'s program block gets skipped and [prg_while_next_stmt] is assigned to [prg_to_execute];
+    + A state having [prg_to_execute] as program and [new_state] as state is returned.
+@param b_expr [While]'s boolean expression.
+@param while_prg The program associated to [While]'s body;
+@param state The state where the [While] statement has been encountered.
+@return A state having:
+        - as a program: the augmented [while_prg] if [b_expr]'s evaluation is [true], or the program having the statement
+          following the [While] under evaluation as current statement if [b_expr]'s evaluation is [false];
+        - as sigma store: the same as the [state] parameter;
+        - as auxiliary delta store: [state]'s delta store, with [false] pushed onto {!type:Delta.while_stack}.
+*)
 let while_eval_rev b_expr while_prg state =
   let b_eval = State.top_while state in
   let new_state = State.pop_while state |> State.prev_stmt in
-  let prg_while_prev_stmt = State.get_program new_state |> Program.prev_stmt in
+  let prg_while_prev_stmt = State.get_program new_state in
   let outer_prg = State.get_program new_state in
 
   let prg_to_execute =
     if b_eval then
-    aug_while_block b_expr while_prg outer_prg
+    aug_while_block b_expr while_prg outer_prg |> Program.last_stmt
   else
     prg_while_prev_stmt
   in
-  State.set_program prg_to_execute new_state |> State.last_stmt;;
+  State.set_program prg_to_execute new_state ;;
 
 let while_start_eval while_stmt_in_outer_prg state =
   let b_eval = State.top_while state in
