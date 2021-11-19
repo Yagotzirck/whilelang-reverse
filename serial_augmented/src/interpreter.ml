@@ -15,7 +15,7 @@ exception Illegal_statement_rev_execution of string;;
 (** Integer semantics' definition.
 @param expr The integer expression to evaluate.
 @param s The sigma store (used in case the expression contains variables whose value must be retrieved.)
-@return The integer value resulting from evaluating the expression.
+@return The integer value resulting from the expression's evaluation.
 *)
 let rec sem_int ~expr:(expr : int_expr) ~s:(s : Sigma.sigma) : int =
   match expr with
@@ -27,7 +27,7 @@ let rec sem_int ~expr:(expr : int_expr) ~s:(s : Sigma.sigma) : int =
 (** Boolean semantics' definition.
 @param expr The boolean expression to evaluate.
 @param s The sigma store (used in case the expression contains variables whose value must be retrieved.)
-@return The boolean value resulting from evaluating the expression.
+@return The boolean value resulting from the expression's evaluation.
 *)
 let rec sem_bool ~expr:(expr : bool_expr) ~expr:(s : Sigma.sigma) : bool =
   match expr with
@@ -57,8 +57,7 @@ let rec sem_bool ~expr:(expr : bool_expr) ~expr:(s : Sigma.sigma) : bool =
 let assign_var_fwd ~e1 ~e2 ~state =
   match e1 with
     | Val (i) ->
-        let curr_sigma = State.get_sigma state in
-        let value = sem_int e2 curr_sigma in
+        let value = sem_int e2 (State.get_sigma state) in
         State.dassign_fwd i value state
         
     | _ -> raise (Assignment_to_non_var "Assign");;
@@ -76,7 +75,7 @@ let assign_var_fwd ~e1 ~e2 ~state =
 @return The new state where the assignment has been performed.
 @raise Assignment_to_non_var if [e1]'s evaluation isn't a variable/identifier.
 *)
-let assign_var_rev e1 state =
+let assign_var_rev ~e1 ~state =
   match e1 with
     | Val (i) -> State.dassign_rev i state
 
@@ -96,11 +95,10 @@ let assign_var_rev e1 state =
 @return The new state where the sum has been performed.
 @raise Assignment_to_non_var if [e1]'s evaluation isn't a variable/identifier.
 *)
-let cadd e1 e2 state =
+let cadd ~e1 ~e2 ~state =
   match e1 with
   | Val (i) ->
-      let curr_sigma = State.get_sigma state in
-      let value = sem_int e2 curr_sigma in
+      let value = sem_int e2 (State.get_sigma state) in
       State.cadd i value state 
     
   | _ -> raise (Assignment_to_non_var "Cadd, or Csub if execution was reversed");;
@@ -122,8 +120,7 @@ let cadd e1 e2 state =
 let csub ~e1 ~e2 ~state =
   match e1 with
   | Val (i) ->
-        let curr_sigma = State.get_sigma state in
-        let value = sem_int e2 curr_sigma in
+        let value = sem_int e2 (State.get_sigma state) in
         State.csub i value state
 
   | _ -> raise (Assignment_to_non_var "Csub, or Cadd if execution was reversed");;
@@ -186,7 +183,7 @@ let if_eval_fwd ~b ~prg1 ~prg2 ~state =
 @return A new state having as program the augmented [Ifthenelse] branch to execute (starting from the program's last statement),
         as well as an updated {!type:Delta.if_stack} in the sigma store with the top value removed from the stack.
 *)
-let if_eval_rev prg1 prg2 state =
+let if_eval_rev ~prg1 ~prg2 ~state =
   let b_eval = State.top_if state in
   let new_state = State.pop_if state |> State.prev_stmt in
   let prg = State.get_program new_state in
@@ -227,7 +224,7 @@ let if_eval_rev prg1 prg2 state =
         - as sigma store: the same as the [state] parameter;
         - as auxiliary delta store: [state]'s delta store, with [false] pushed onto {!type:Delta.while_stack}.
 *)
-let while_eval_fwd b_expr while_prg state =
+let while_eval_fwd ~b_expr ~while_prg ~state =
   let b_eval = sem_bool b_expr (State.get_sigma state) in
   let new_state = State.push_while false state in
   let prg_while_next_stmt = State.get_program new_state |> Program.next_stmt in
@@ -265,7 +262,7 @@ let while_eval_fwd b_expr while_prg state =
         - as sigma store: the same as the [state] parameter;
         - as auxiliary delta store: [state]'s delta store, with [false] pushed onto {!type:Delta.while_stack}.
 *)
-let while_eval_rev b_expr while_prg state =
+let while_eval_rev ~b_expr ~while_prg ~state =
   let b_eval = State.top_while state in
   let new_state = State.pop_while state |> State.prev_stmt in
   let prg_while_prev_stmt = State.get_program new_state in
@@ -279,7 +276,34 @@ let while_eval_rev b_expr while_prg state =
   in
   State.set_program prg_to_execute new_state ;;
 
-let while_start_eval while_stmt_in_outer_prg state =
+(** Evaluates [While_start] statements during reverse execution.
+
+    NOTE: [While_start] statements can be evaluated ONLY during reverse execution, since they mark the
+    beginning of a [While]'s program body; if they get evaluated during forward execution, then there's a problem
+    (exception [Illegal_statement_fwd_execution] would be raised), but it should never happen anyway.
+
+    The following operations are performed in the given order:
+
+    + The boolean value on the top of {!type:Delta.while_stack} gets retrieved and assigned to [b_eval];
+    + [new_state] is created from [state] by removing (popping) {!type:Delta.while_stack}'s top value (which we just assigned
+      to [b_eval] in the previous step);
+    + if [b_eval] is [true], it means we must perform another reverse iteration of the [While] program block we're currently executing
+      starting from the last statement,therefore we set the current statement to the last statement of the current program block
+      (by calling {!val:Program.last_stmt}) and the result is assigned to [prg_to_execute].
+      Otherwise ([b_eval] is [false]), it means the last iteration of [While]'s program has been performed and we need to jump out of the loop, therefore
+      [while_stmt_in_outer_prg] (which is [While_start]'s parameter consisting in the outer program having as current statement the [While] statement
+      containing the program block which is currently being executed) gets assigned to [prg_to_execute];
+    + A state having [prg_to_execute] as program and [new_state] as state is returned.
+@param  while_stmt_in_outer_prg The program having the [While] statement whose body is being executed, where execution will continue in case reverse iteration
+        must be stopped due to a [false] value popped from {!type:Delta.while_stack}.
+@param state The current state, where the [While_start] statement has been encountered.
+@return A state having:
+        - as a program: the current program having the current statement set to the program's last statement if the value retrieved from
+          {!type:Delta.while_stack} is [true], or [while_stmt_in_outer_prg] if the value retrieved from {!type:Delta.while_stack} is [false];
+        - as sigma store: the same as the [state] parameter;
+        - as auxiliary delta store: [state]'s delta store, with the retrieved boolean value [b_eval] popped(removed) from the top of {!type:Delta.while_stack}.
+*)
+let while_start_eval ~while_stmt_in_outer_prg ~state =
   let b_eval = State.top_while state in
   let new_state = State.pop_while state in
   let prg_to_execute =
@@ -290,7 +314,37 @@ let while_start_eval while_stmt_in_outer_prg state =
   in
   State.set_program prg_to_execute new_state;;  
 
-let while_end_eval b_expr while_next_stmt_in_outer_prg state =
+
+(** Evaluates [While_end] statements during forward execution.
+
+    NOTE: [While_end] statements can be evaluated ONLY during forward execution, since they mark the
+    end of a [While]'s program body; if they get evaluated during reverse execution, then there's a problem
+    (exception [Illegal_statement_rev_execution] would be raised), but it should never happen anyway.
+
+    The following operations are performed in the given order:
+
+    + [b_expr] ([While]'s boolean expression) is evaluated and assigned to [b_eval];
+    + [new_state] is created from [state] by pushing [true] onto {!type:Delta.while_stack} (We're at the end of a [While] program iteration which has
+      has been executed, therefore we must push [true] to mark the fact an iteration has been executed when we reverse execute the program,
+      regardless of [b_eval]'s value);
+    + if [b_eval] is [true], it means we must perform another forward iteration of the [While] program block we're currently executing
+      starting from the first statement,therefore we set the current statement to the first statement of the current program block
+      (by calling {!val:Program.while_block_1st_stmt}) and the result is assigned to [prg_to_execute].
+      Otherwise ([b_eval] is [false]), it means the last iteration of [While]'s program has been performed and we need to jump out of the loop, therefore
+      [while_next_stmt_in_outer_prg] (which is [While_end]'s parameter consisting in the outer program having as current statement the statement following
+      the [While] statement containing the program block which is currently being executed) is assigned to [prg_to_execute];
+    + A state having [prg_to_execute] as program and [new_state] as state is returned.
+@param  b_expr [While_end]'s boolean expression, inherited from the containing [While] statement.
+@param  while_next_stmt_in_outer_prg The program having the [While] statement whose body is being executed, where execution will continue to [While]'s next
+        statement in case iteration must be stopped due to [b_expr] evaluating to [false].
+@param state The current state, where the [While_start] statement has been encountered.
+@return A state having:
+        - as a program: the current program having the current statement set to the program's first statement if [b_expr]'s evaluation
+          is [true], or [while_next_stmt_in_outer_prg] if [b_expr]'s evaluation is [false];
+        - as sigma store: the same as the [state] parameter;
+        - as auxiliary delta store: [state]'s delta store, with [true] pushed onto {!type:Delta.while_stack}.
+*)
+let while_end_eval ~b_expr ~while_next_stmt_in_outer_prg ~state =
   let b_eval = sem_bool b_expr (State.get_sigma state) in
   let new_state = State.push_while true state in
   let prg_to_execute =
@@ -301,14 +355,15 @@ let while_end_eval b_expr while_next_stmt_in_outer_prg state =
   in
   State.set_program prg_to_execute new_state;; 
 
+(** Given a state, performs a single evaluation step in forward execution mode and returns the resulting state.*)
 let sem_stmt_fwd (curr_state : State.state) : State.state =
   let expr = State.get_curr_stmt curr_state in
   match expr with
     | Program_end -> curr_state
-    | Skip -> State.next_stmt curr_state
-    | Assign (e1, e2) -> State.next_stmt (assign_var_fwd e1 e2 curr_state)
-    | Cadd (e1, e2) -> State.next_stmt (cadd e1 e2 curr_state)
-    | Csub (e1, e2) -> State.next_stmt (csub e1 e2 curr_state)
+    | Skip -> curr_state |> State.next_stmt
+    | Assign (e1, e2) -> (assign_var_fwd e1 e2 curr_state) |> State.next_stmt
+    | Cadd (e1, e2) -> (cadd e1 e2 curr_state) |> State.next_stmt
+    | Csub (e1, e2) -> (csub e1 e2 curr_state) |> State.next_stmt
     | Ifthenelse (b_expr, prg1, prg2) -> if_eval_fwd b_expr prg1 prg2 curr_state
     | If_end (prg, b_eval) -> State.set_program prg (State.push_if b_eval curr_state)
     | While (b_expr, prg) -> while_eval_fwd b_expr prg curr_state
@@ -320,14 +375,15 @@ let sem_stmt_fwd (curr_state : State.state) : State.state =
     | While_start _ -> raise (Illegal_statement_fwd_execution "While_start");;
   
 
+(** Given a state, performs a single evaluation step in reverse execution mode and returns the resulting state.*)
 let sem_stmt_rev (curr_state : State.state) : State.state =
   let expr = State.get_prev_stmt curr_state in
   match expr with
     | Program_start -> curr_state
-    | Skip -> State.prev_stmt curr_state
-    | Assign (e1, _) -> State.prev_stmt (assign_var_rev e1 curr_state)
-    | Cadd (e1, e2) -> State.prev_stmt (csub e1 e2 curr_state)
-    | Csub (e1, e2) -> State.prev_stmt (cadd e1 e2 curr_state)
+    | Skip -> curr_state |> State.prev_stmt
+    | Assign (e1, _) -> (assign_var_rev e1 curr_state) |> State.prev_stmt
+    | Cadd (e1, e2) -> (csub e1 e2 curr_state) |> State.prev_stmt
+    | Csub (e1, e2) -> (cadd e1 e2 curr_state) |> State.prev_stmt
     | Ifthenelse (_, prg1, prg2) -> if_eval_rev prg1 prg2 curr_state
     | If_start (prg_prev) -> State.set_program prg_prev curr_state
     | While (b_expr, prg) -> while_eval_rev b_expr prg curr_state
@@ -339,31 +395,51 @@ let sem_stmt_rev (curr_state : State.state) : State.state =
     | While_end (_, _) -> raise (Illegal_statement_rev_execution "While_end");;
 
 
+(** Given a state, evaluates all statements until the end of the program in forward execution mode and returns the resulting state.*)
 let rec sem_prg_fwd curr_state =
   if not (State.is_prg_at_end curr_state) then
     sem_prg_fwd (sem_stmt_fwd curr_state)
   else
     curr_state;;
 
+(** Given a state, evaluates all statements until the beginning of the program in reverse execution mode and returns the resulting state.*)
 let rec sem_prg_rev curr_state =
   if not (State.is_prg_at_start curr_state) then
     sem_prg_rev (sem_stmt_rev curr_state)
   else
     curr_state;;
 
+(** Given a state [curr_state] and a specified [num_steps] integer, let [remaining_stmts] be the number of statements 
+    between the current statement in [curr_state]'s program and the [Program_end] boundary statement; then the function
+    performs min([remaining_stmts], [num_steps]) statement evaluations in forward execution mode and returns the resulting state.
 
+    If [num_steps] <= 0, [curr_state] is returned unaltered.
+*)
 let rec sem_prg_fwd_steps curr_state num_steps =
   if not (State.is_prg_at_end curr_state) && num_steps > 0 then
     sem_prg_fwd_steps (sem_stmt_fwd curr_state) (num_steps - 1)
   else
     curr_state;;
 
-let rec sem_prg_rev_steps curr_state num_steps =
+(** Given a state [curr_state] and a specified [num_steps] integer, let [remaining_stmts] be the number of statements 
+    between the current statement in [curr_state]'s program and the [Program_start] boundary statement; then the function
+    performs min([remaining_stmts], [num_steps]) statement evaluations in reverse execution mode and returns the resulting state.
+
+    If [num_steps] <= 0, [curr_state] is returned unaltered.
+*)
+    let rec sem_prg_rev_steps curr_state num_steps =
   if not (State.is_prg_at_start curr_state) && num_steps > 0 then
     sem_prg_rev_steps (sem_stmt_rev curr_state) (num_steps -1)
   else
     curr_state;;
 
+
+(** Given a state [curr_state] and a specified [num_steps] integer, it acts as an interface allowing both forward and reverse
+    execution by calling
+      - {!val:sem_prg_fwd_steps} (forward execution), if [num_steps] >= 0;
+      - {!val:sem_prg_rev_steps} (reverse execution), if [num_steps] < 0 (in this case, [num_steps]'s sign gets inverted to obtain the
+        positive amount of steps to execute to pass to {!val:sem_prg_rev_steps} as parameter.)
+*)
 let sem_prg_steps curr_state num_steps =
   if num_steps >= 0 then
     sem_prg_fwd_steps curr_state num_steps
