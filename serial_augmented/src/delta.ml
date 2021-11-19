@@ -126,11 +126,12 @@ let private_pop_if (if_stk : if_stack) : if_stack =
     [While]'s body has been executed, in order to iterate that program for the
     same amount of times during reverse execution.
 
-    The way it works is that during forward execution [false] is pushed in [while_stack],
-    and [true] is pushed at the end of each [While]'s program body; by doing so, during
-    reverse execution we keep reiterating [While]'s body as long as [true] is popped from
-    [while_stack], and execution continues to the instruction preceding [While] as soon as
-    [false] is popped: this guarantees that the same amount of iterations of [While]'s body
+    The way it works is that during forward execution [false] is pushed in [while_stack] when
+    a [While] statement is evaluated, and [true] is pushed at the end of each [While]'s program body
+    whenever a [While_end] statement is evaluated; by doing so, during reverse execution we keep reiterating
+    [While]'s body as long as [true] is popped from [while_stack] whenever [While] or [While_start] is evaluated,
+    and execution continues to the statement/instruction preceding [While] as soon as
+    [false] is popped: this guarantees that the same amount of iterations of [While]'s body that were
     performed during forward execution is performed during reverse execution as well.
 *)
 type while_stack = While_stack of bool list;;
