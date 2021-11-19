@@ -15,7 +15,7 @@ Therefore, we need to *augment* the **AST** by converting it to a *zipper* (read
 
 3. The augmented **AST**, the **sigma store** (**sigma**, from now on) and an empty **delta store** are used to create the initial **state** (which constitutes the core of the interpreter, as we'll see);
 
-4. The **state** is passed to a manager function which takes care of
+4. The **state** is passed to a looping manager function which takes care of
 	- Asking the user how many steps to execute and in which direction (forward with positive values, backward with negative values, and 0 for quitting);
 	- Printing the ** state ** each time the steps entered by the user have been executed.
 
@@ -47,6 +47,7 @@ The generated doc files can then be retrieved at (starting from this directory):
 
 ### Tests
 I've written 3 test files: one for the **sigma store**, one for the **delta store** and one for the **interpreter**; they're far from being exhaustive (especially the interpreter tests), but better than nothing, I guess :)
+
 To execute each one, open a terminal inside this folder (`<project root>/serial`) and type:
 
     dune exec src/bin/test_sigma.exe
