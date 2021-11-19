@@ -1,5 +1,5 @@
 open OUnit2
-open Sigma
+open Serial_interp.Sigma
 
 (* Data for sigma tests *)
 

@@ -1,6 +1,6 @@
 (library
  (name lexer_parser)
- (libraries ast state)
+ (libraries serial_interp)
 )
 
 (menhir

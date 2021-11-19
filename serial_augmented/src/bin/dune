@@ -1,0 +1,36 @@
+; Main program
+
+(executable
+  (name whilelang_serial)
+  (modules Whilelang_serial) 
+  (libraries lexer_parser serial_interp print_state)
+)
+
+
+; Unit tests
+
+(executable
+ (name test_interpreter)
+ (modules Test_interpreter)
+ (libraries ounit2 serial_interp)
+)
+
+(executable
+ (name test_delta)
+ (modules Test_delta)
+ (libraries ounit2 serial_interp)
+ )
+
+ (executable
+ (name test_sigma)
+ (modules Test_sigma)
+ (libraries ounit2 serial_interp)
+ )
+ 
+ ; Libraries
+ 
+(library
+  (name print_state)
+  (modules Print_state)
+  (libraries serial_interp)
+)

@@ -121,12 +121,14 @@ and aug_stmt ~s:(s : stmt) : stmt_aug =
     | While (b, prg) -> While (b, aug_if_while_in_list prg)
 
 
-(** Augment a program (by representing it as a zipper structure, among the other things)) and its statements.
+(** Augment a program (by representing it as a zipper structure, among the other things) and its statements.
 
-    Also, put [Program_start] statement at the beginning and [Program_end] at the end of the list,
+    Also, put [Program_start] statement at the beginning and [Program_end] at the end of the program,
     in order to set the whole program's boundaries.
 @param prg The program to be augmented.
-@return The augmented program. *)
+@return The augmented program. 
+@raise Empty_prg_block when the program to augment ([prg]) is empty.
+*)
 and aug_prg ~prg:(prg: program) : program_aug =
   let rec create_list = function
     | Program_empty -> []

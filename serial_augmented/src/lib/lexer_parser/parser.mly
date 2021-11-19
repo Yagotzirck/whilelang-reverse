@@ -2,8 +2,8 @@
  * Copied as-is in the generated parser.ml file
 *)
 %{
-    open Ast
-    open Sigma
+    open Serial_interp.Ast
+    open Serial_interp.Sigma
 %}
 
 (* Declarations
@@ -11,10 +11,10 @@
 *)
 
 (* int_expr and constructive assignment tokens *)
-%token <int>            INT
-%token <Ast.ide>        ID
-%token                  PLUS
-%token                  MINUS
+%token <int>                    INT
+%token <Serial_interp.Ast.ide>  ID
+%token                          PLUS
+%token                          MINUS
 
 (* bool_expr tokens *)
 %token          TRUE
@@ -53,7 +53,7 @@
 
 
 (* Starting point for parsing the language *)
-%start < (Ast.program * Sigma.sigma) > prg_state
+%start < (Serial_interp.Ast.program * Serial_interp.Sigma.sigma) > prg_state
 
 
 %% (* End of declarations section *)

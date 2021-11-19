@@ -1,5 +1,5 @@
 open OUnit2
-open Delta
+open Serial_interp.Delta
 
 
 (****** Data for delta tests ******)

@@ -1,8 +1,9 @@
 open OUnit2
-open Interpreter
-open Sigma
-open Augment
-open Ast
+open Serial_interp
+open Serial_interp.Interpreter
+open Serial_interp.Sigma
+open Serial_interp.Augment
+open Serial_interp.Ast
 
 let exec_and_get_var initial_state var =
   let final_state = sem_prg_fwd initial_state in

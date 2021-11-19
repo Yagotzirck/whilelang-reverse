@@ -1,10 +1,14 @@
 (** Implementation of the program store and the functions acting on it.*)
 
+
+
 open Ast;;
 
 (* Exceptions' definitions *)
 exception Unbound_variable of string;;
 let exc_unbound_var var_name = Unbound_variable ("Variable '" ^ var_name ^ "' not found in the program store");;
+
+
 
 (** sigma is a type representing the store (that is, the set of 
     all declared identifiers(variables) and the respective integer values associated to them).
@@ -61,6 +65,7 @@ let cassign ~s:(s : sigma) ~ide_name:(ide_name : ide) ~operation:(operation : in
   cassign_inner s;;
 
 
+
 (** Constructive sum (+=): adds [value] to the value associated to
     [ide_name], and returns the updated [sigma] store where
 
@@ -99,3 +104,4 @@ let rec get_value ~s ~ide_name =
     | Sigma_empty -> raise (exc_unbound_var ide_name)
     | Sigma((i, v), _) when i = ide_name -> v
     | Sigma(_, next) -> get_value next ide_name;;
+

@@ -1,5 +1,6 @@
-open Augment
-open Interpreter
+open Serial_interp
+open Serial_interp.Augment
+open Serial_interp.Interpreter
 open Print_state
 
 let rec exec_prg prg_state =
