@@ -17,7 +17,7 @@ Therefore, we need to *augment* the **AST** by converting it to a *zipper* (read
 
 4. The **state** is passed to a looping manager function which takes care of
 	- Asking the user how many steps to execute and in which direction (forward with positive values, backward with negative values, and 0 for quitting);
-	- Printing the ** state ** each time the steps entered by the user have been executed.
+	- Printing the **state** each time the steps entered by the user have been executed.
 
 
 ## Usage
