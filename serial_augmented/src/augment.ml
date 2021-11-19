@@ -105,7 +105,7 @@ let rec aug_if_while_in_list (prg : program) : program_aug =
 
     Unlike the main program, [If_start]/[If_end] and [While_start]/[While_end] boundaries aren't put
     at this stage; instead, they get added at runtime, since they all contain the containing augmented
-    program as a parameter (which hasn't been fully constructed yet at this stage).
+    program where [If]/[While] statement has been encountered as a parameter (which hasn't been fully constructed yet at this stage).
 @param s The statement to be augmented.
 @return The augmented statement.
 @raise  Empty_if_while_block in case a program contained inside a [While] block or inside either of
@@ -123,7 +123,7 @@ and aug_stmt ~s:(s : stmt) : stmt_aug =
 
 (** Augment a program (by representing it as a zipper structure, among the other things)) and its statements.
 
-    Also, put [Program_start] instatement at the beginning and [Program_end] at the end of the list,
+    Also, put [Program_start] statement at the beginning and [Program_end] at the end of the list,
     in order to set the whole program's boundaries.
 @param prg The program to be augmented.
 @return The augmented program. *)
