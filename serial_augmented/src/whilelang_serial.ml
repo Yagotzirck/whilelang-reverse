@@ -11,7 +11,7 @@ let rec exec_prg prg_state =
       print_endline "The inserted value isn't a valid integer.";
       read_steps()
   in
-
+  print_string "\n\n\n\n\n";
   print_state prg_state;
   print_string "\n\n\n\n\n";
 
