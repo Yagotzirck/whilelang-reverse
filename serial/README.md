@@ -37,6 +37,61 @@ Once you've got it, launch it from a terminal by typing
     ./whilelang_serial.exe <While language source file>
 You can see some While language source examples inside the folder `src/while_prgs/`.
 
+### While language syntax
+
+The syntax for a While language is rather simple: a While source file begins by defining the variables inside a block delimited by keywords `sigmadef` and `end`, for example:
+
+	sigmadef
+		var_1 = 6;
+		var_2 = 10;
+		var_3 = 50;
+	end
+
+It's important to define all variables used by the program inside the `sigmadef` block specified above; any attempt to use a variable inside the program that wasn't defined in there would result in an `Unbound_variable` exception being raised at runtime.
+
+A variable's name **must begin with a letter** (either uppercase or lowercase), and can contain **letters**, **numbers** and **underscores**; also, only integer values can be assigned to a variable.
+
+Statements consist of the following operations:
+- Destructive assignments: `var_name = <integer-expression>;`
+- Constructive assignments: `var_name += <integer-expression>;` and `var_name -= <integer-expression>;`
+- Conditional statements:
+
+        if <boolean-expression> then
+        	<statements' list for then branch>
+        else
+        	<statements' list for else branch>
+        end
+
+- Conditional loops:
+
+        while <boolean-expression> do
+        	<statements' list for while loop>
+        end
+
+- Skip statement: `skip`
+
+The `skip` statement can be more useful than it may seem at a first glance, e.g. if we want a conditional statement to do nothing if its boolean expression evaluates to false, we could do the following:
+
+        if <boolean-expression> then
+        	<statements' list for then branch>
+        else
+        	skip
+        end
+
+An `<integer-expression>` consists of the following operations/constructs:
+- Integer constants
+- Variables (previously defined in the `sigmadef` block at the beginning of the program)
+- Sum (`+` operator)
+- Subtraction (`-` operator)
+
+A `<boolean-expression>` consists of the following operations/constructs:
+- Boolean constants ( `true` and `false` )
+- Logical NOT ( C-style `!` prefix operator, e.g. `! <boolean-expression>` )
+- Logical AND ( C-style `&&`, e.g. `<boolean-expression1> && <boolean-expression2>`
+- Integer equality ( `<integer-expression1> == <integer-expression2` )
+- Integer inequality - "greater than" ( `>` operator, e.g. `<integer-expression1> > <integer-expression2` )
+
+
 ### Generating Ocamldoc files
 Open a terminal inside this folder (`<project root>/serial`) and type
 
