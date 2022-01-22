@@ -15,7 +15,7 @@ exception Empty_prg_block;;
 let rec ann_prg_in_par (prg : program) : program_ann = 
   let rec create_list = function
     | Program_empty -> []
-    | Program(stmt, prg_next) -> (aug_stmt stmt) :: create_list prg_next
+    | Program(stmt, prg_next) -> (ann_stmt stmt) :: create_list prg_next
   in
   let create_prg = function
   | [] -> raise Empty_par_prg_block
@@ -48,6 +48,7 @@ and ann_stmt ~s:(s : stmt) : stmt_ann =
 
     Also, puts [Program_start] statement at the beginning and [Program_end] at the end of the program,
     in order to set the whole program's boundaries.
+
 @param prg The program to be annotated.
 @return The annotated program. 
 @raise Empty_prg_block when the program to annotate ([prg]) is empty.
@@ -55,10 +56,10 @@ and ann_stmt ~s:(s : stmt) : stmt_ann =
 and ann_prg ~prg:(prg: program) : program_ann =
   let rec create_list = function
     | Program_empty -> []
-    | Program(stmt, prg_next) -> (aug_stmt stmt) :: create_list prg_next
+    | Program(stmt, prg_next) -> (ann_stmt stmt) :: create_list prg_next
   in
-  let create_aug_prg = function
+  let create_ann_prg = function
   | [] -> raise Empty_prg_block
-  | h :: t -> Program_aug (Program_start :: [], h, t @ [Program_end])
+  | h :: t -> Program_ann (Program_start :: [], h, t @ [Program_end])
   in
-  create_list prg |> create_aug_prg;;
+  create_list prg |> create_ann_prg;;
