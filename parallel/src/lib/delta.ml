@@ -102,25 +102,25 @@ type delta = Delta of ide_stacks;;
 *)
 let push_ide ~d:(d : delta) ~ide_name:(ide_name : ide) ~value:(value : int) : delta =
   match d with
-    Delta(ide_stks, if_stk, while_stk) ->
+    Delta(ide_stks) ->
       let updated_ide_stks = private_push_ide ide_stks ide_name value in
-      Delta(updated_ide_stks, if_stk, while_stk);;
+      Delta(updated_ide_stks);;
 
 (** This is a wrapper which applies {!val:private_top_ide} to the parameter [ide_stks] inside the specified
     [d] delta parameter.
 *)
 let top_ide ~d:(d : delta) ~ide_name:(ide_name : ide) : int =
   match d with
-    Delta(ide_stks, _, _) -> private_top_ide ide_stks ide_name;;
+    Delta(ide_stks) -> private_top_ide ide_stks ide_name;;
 
 (** This is a wrapper which applies {!val:private_pop_ide} to the parameter [ide_stks] inside the specified
     [d] delta parameter.
 *)
 let pop_ide ~d:(d : delta) ~ide_name:(ide_name : ide) : delta =
   match d with
-    Delta(ide_stks, if_stk, while_stk) ->
+    Delta(ide_stks) ->
       let updated_ide_stks = private_pop_ide ide_stks ide_name in
-      Delta(updated_ide_stks, if_stk, while_stk);;
+      Delta(updated_ide_stks);;
 
 (** Returns an empty auxiliary store, *)
 let empty_delta = Delta(Ide_stacks []);;
