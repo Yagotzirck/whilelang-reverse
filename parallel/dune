@@ -1,0 +1,4 @@
+; Disable warning 6 (labels-omitted) being treated as an error
+(env
+  (dev
+    (flags (:standard -w -6))))
