@@ -19,7 +19,7 @@ let rec ann_prg_in_par (prg : program) : program_ann =
   in
   let create_prg = function
   | [] -> raise Empty_par_prg_block
-  | h :: t -> Program_ann (Par_prg_start :: [], h, t @ Par_prg_end)
+  | h :: t -> Program_ann (Par_prg_start :: [], h, t @ [Par_prg_end])
   in
   create_list prg |> create_prg
 
