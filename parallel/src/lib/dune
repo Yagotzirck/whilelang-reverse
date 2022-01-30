@@ -1,4 +1,4 @@
 (library
   (name par_interp)
-  (modules ast ast_ann annotate program delta sigma thread)
+  (modules ast ast_ann annotate program delta sigma thread state interpreter)
 )
