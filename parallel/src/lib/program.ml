@@ -6,8 +6,7 @@ open Ast_ann;;
 exception No_previous_statements;;
 exception No_next_statements;;
 
-exception If_start_not_found;;
-exception While_start_not_found;;
+exception Statement_without_stack of string;;
 
 (** Given a program, adds [stmt_ann] as the program's first statement/instruction. *)
 let prepend_stmt ~stmt_ann = function
@@ -50,3 +49,27 @@ let get_prev_stmt = function
 (** Returns the current statement inside the program. *)
 let get_curr_stmt = function
   | Program_ann (_, curr, _) -> curr;;
+
+
+(** Given an int value [stmt_counter] representing the current statement counter and a program [prg],
+    pushes [stmt_counter] onto the source code stack associated to [prg]'s current instruction.
+@raises Statement_without_stack if the current instruction doesn't have an associated source code stack.
+*)
+let push_stmt_counter stmt_counter prg =
+  let push_inner = function
+  | Program_start -> raise (Statement_without_stack "Program_start")
+  | Program_end -> raise (Statement_without_stack "Program_end")
+  | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
+  | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
+  | Par (_, _) -> raise (Statement_without_stack "Par")
+
+  | Skip stmt_stk -> Skip (stmt_counter :: stmt_stk)
+  | Assign (e1, e2, stmt_stk) -> Assign (e1, e2, stmt_counter :: stmt_stk)
+
+  | Cadd (e1, e2, stmt_stk) -> Cadd (e1, e2, stmt_counter :: stmt_stk)
+  | Csub (e1, e2, stmt_stk) -> Csub (e1, e2, stmt_counter :: stmt_stk)
+
+  in
+  match prg with
+    | Program_ann (prev_stmts, curr_stmt, next_stmts) -> Program_ann (prev_stmts, push_inner curr_stmt, next_stmts);;
+        
