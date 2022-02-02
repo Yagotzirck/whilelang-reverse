@@ -113,22 +113,46 @@ let csub ~e1 ~e2 ~state =
   | _ -> raise (Assignment_to_non_var "Csub, or Cadd if execution was reversed");;
 
 
+(** Given a thread ID and a state, performs the following operations:
+
+  + Pushes the statement counter onto the current statement's source code stack;
+  + Increments the state's statement counter by 1;
+  + Moves the current instruction of the program contained in the given thread ID to the next instruction;
+  + Returns the updated state.
+
+  This is an auxiliary function for {!val:sem_stmt_fwd}, which groups boilerplate code
+  to perform once the statement has been interpreted and executed into a single function.
+*)
+let move_to_next_stmt tid state =
+  State.push_stmt_counter tid state |> State.inc_num_stmts |> State.next_stmt tid;;
+
+
+let exec_par_fwd prg1 prg2 ptid state =
+  State.set_thread_as_waiting ptid state |> State.new_running_thread prg2 ptid Right |> State.new_running_thread prg1 ptid Left;;
+
+
+let exec_par_prg_end tid state =
+
+
+
 (** Given a state and a thread ID, performs a single evaluation step in forward execution mode
     in the program associated to the given thread ID, and returns the resulting state.*)
 let sem_stmt_fwd (curr_state : State.state) (tid : int) : State.state =
   let expr = State.get_curr_stmt tid curr_state in
   match expr with
     | Program_end -> curr_state
-    | Skip -> curr_state |> State.next_stmt
-    | Assign (e1, e2) -> (assign_var_fwd e1 e2 curr_state) |> State.next_stmt
-    | Cadd (e1, e2) -> (cadd e1 e2 curr_state) |> State.next_stmt
-    | Csub (e1, e2) -> (csub e1 e2 curr_state) |> State.next_stmt
-    | Ifthenelse (b_expr, prg1, prg2) -> if_eval_fwd b_expr prg1 prg2 curr_state
+    | Skip _ ->  move_to_next_stmt tid curr_state
+    | Assign (e1, e2, _) -> (assign_var_fwd e1 e2 curr_state) |> move_to_next_stmt tid
+    | Cadd (e1, e2, _) -> (cadd e1 e2 curr_state) |> move_to_next_stmt tid
+    | Csub (e1, e2, _) -> (csub e1 e2 curr_state) |> move_to_next_stmt tid
+
+    | Par (prg1, prg2, num_chld_done) -> exec_par_fwd prg1 prg2 tid curr_state
+    | Par_prg_end -> curr_state
 
     (* The following statement expressions aren't supposed to be encountered during forward execution *)
     | Program_start -> raise (Illegal_statement_fwd_execution "Program_start")
-    | If_start _ -> raise (Illegal_statement_fwd_execution "If_start")
-    | While_start _ -> raise (Illegal_statement_fwd_execution "While_start");;
+    | Par_prg_start -> raise (Illegal_statement_fwd_execution "Par_prg_start")
+
   
 
 (** Given a state, performs a single evaluation step in reverse execution mode and returns the resulting state.*)
