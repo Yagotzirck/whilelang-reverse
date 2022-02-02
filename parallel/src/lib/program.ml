@@ -7,6 +7,7 @@ exception No_previous_statements;;
 exception No_next_statements;;
 
 exception Statement_without_stack of string;;
+exception Statement_empty_stack of string;;
 
 (** Given a program, adds [stmt_ann] as the program's first statement/instruction. *)
 let prepend_stmt ~stmt_ann = function
@@ -57,19 +58,72 @@ let get_curr_stmt = function
 *)
 let push_stmt_counter stmt_counter prg =
   let push_inner = function
-  | Program_start -> raise (Statement_without_stack "Program_start")
-  | Program_end -> raise (Statement_without_stack "Program_end")
-  | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
-  | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
-  | Par (_, _) -> raise (Statement_without_stack "Par")
+    | Program_start -> raise (Statement_without_stack "Program_start")
+    | Program_end -> raise (Statement_without_stack "Program_end")
+    | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
+    | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
+    | Par (_, _, _) -> raise (Statement_without_stack "Par")
 
-  | Skip stmt_stk -> Skip (stmt_counter :: stmt_stk)
-  | Assign (e1, e2, stmt_stk) -> Assign (e1, e2, stmt_counter :: stmt_stk)
+    | Skip stmt_stk -> Skip (stmt_counter :: stmt_stk)
+    | Assign (e1, e2, stmt_stk) -> Assign (e1, e2, stmt_counter :: stmt_stk)
 
-  | Cadd (e1, e2, stmt_stk) -> Cadd (e1, e2, stmt_counter :: stmt_stk)
-  | Csub (e1, e2, stmt_stk) -> Csub (e1, e2, stmt_counter :: stmt_stk)
+    | Cadd (e1, e2, stmt_stk) -> Cadd (e1, e2, stmt_counter :: stmt_stk)
+    | Csub (e1, e2, stmt_stk) -> Csub (e1, e2, stmt_counter :: stmt_stk)
 
   in
   match prg with
     | Program_ann (prev_stmts, curr_stmt, next_stmts) -> Program_ann (prev_stmts, push_inner curr_stmt, next_stmts);;
-        
+
+  
+  let top_prev_stmt_counter prg =
+    let top_inner = function
+    | Program_start -> raise (Statement_without_stack "Program_start")
+    | Program_end -> raise (Statement_without_stack "Program_end")
+    | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
+    | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
+    | Par (_, _, _) -> raise (Statement_without_stack "Par")
+
+
+    | Skip [] -> raise (Statement_empty_stack "Skip")
+    | Skip (h :: _) -> h
+
+    | Assign (_, _, []) -> raise (Statement_empty_stack "Assign")
+    | Assign (_, _, h :: _) -> h
+
+    | Cadd (_, _, []) -> raise (Statement_empty_stack "Cadd")
+    | Cadd (_, _, h :: _) -> h
+
+    | Csub (_, _, []) -> raise (Statement_empty_stack "Csub")
+    | Csub (_, _, h :: _) -> h
+
+  in
+  match prg with
+    | Program_ann ([], _, _) -> raise No_previous_statements
+    | Program_ann ( h_prev :: _, _, _) -> top_inner h_prev;;
+
+  
+    let pop_prev_stmt_counter prg =
+      let pop_inner = function
+      | Program_start -> raise (Statement_without_stack "Program_start")
+      | Program_end -> raise (Statement_without_stack "Program_end")
+      | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
+      | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
+      | Par (_, _, _) -> raise (Statement_without_stack "Par")
+  
+  
+      | Skip [] -> raise (Statement_empty_stack "Skip")
+      | Skip (_ :: t) -> Skip t
+  
+      | Assign (_, _, []) -> raise (Statement_empty_stack "Assign")
+      | Assign (e1, e2, _ :: t) -> Assign (e1, e2, t)
+  
+      | Cadd (_, _, []) -> raise (Statement_empty_stack "Cadd")
+      | Cadd (e1, e2, _ :: t) -> Cadd (e1, e2, t)
+  
+      | Csub (_, _, []) -> raise (Statement_empty_stack "Csub")
+      | Csub (e1, e2, _ :: t) -> Csub (e1, e2, t)
+  
+    in
+    match prg with
+      | Program_ann ([], _, _) -> raise No_previous_statements
+      | Program_ann ( h_prev :: t_prev, curr, next) -> Program_ann ( (pop_inner h_prev) :: t_prev, curr, next);;
