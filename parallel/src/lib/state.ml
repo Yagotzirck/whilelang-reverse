@@ -22,7 +22,7 @@ type state = State of thread list * thread list * int * int * Sigma.sigma * Delt
 let first_stmt_value = 1;;
 
 (** Value used to initialize state's [num_curr_thread] value. *)
-let root_tid_value = 0;;   (* Root thread ID *)
+let root_tid_value = 1;;   (* Root thread ID *)
 
 
 (** Executes a destructive assignment in forward execution mode, assigning [new_value] to the variable [ide_name].
@@ -72,7 +72,7 @@ let csub ide_name value = function
 *)
 let rec get_thread_from_list tid = function
     | [] -> raise Not_found
-    | Thread (prg, curr_tid, ptid, num_chld_done) :: _ when curr_tid = tid -> Thread (prg, curr_tid, ptid, num_chld_done)
+    | Thread (prg, curr_tid, ptid, branch, num_chld_done) :: _ when curr_tid = tid -> Thread (prg, curr_tid, ptid, branch, num_chld_done)
     | _ :: t -> get_thread_from_list tid t;;
 
 (** Given a thread ID and a list of threads, removes the thread from the list matching the ID
@@ -82,7 +82,7 @@ let rec get_thread_from_list tid = function
 *)
 let rec remove_thread_from_list tid = function
     | [] -> raise Not_found
-    | Thread (_, curr_tid, _, _) :: t when curr_tid = tid -> t
+    | Thread (_, curr_tid, _, _, _) :: t when curr_tid = tid -> t
     | h :: t -> h :: remove_thread_from_list tid t;;
 
 
@@ -91,8 +91,13 @@ let get_running_thread tid = function
     | State (t_running, _, _, _, _, _) -> get_thread_from_list tid t_running;;
 
 (** Adds a thread to the list of running threads inside the specified state parameter. *)
-let add_running_thread new_thread = function
-    | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (new_thread :: t_running, t_waiting, num_stmts, num_threads, s, d);;
+let add_running_thread thread = function
+    | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (thread :: t_running, t_waiting, num_stmts, num_threads, s, d);;
+
+(** Given a program, a parent thread ID, a branch and a state, creates a new thread containing the given program in the list of running threads
+    inside the specified state parameter. *)
+let new_running_thread prg ptid branch = function
+    | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State ( (Thread.create prg num_threads ptid branch) :: t_running, t_waiting, num_stmts, num_threads + 1, s, d);;
 
 (** Removes the thread with the given ID from the list of running threads inside the specified state parameter. *)
 let remove_running_thread tid = function
@@ -112,6 +117,19 @@ let remove_waiting_thread tid = function
     | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, remove_thread_from_list tid t_waiting, num_stmts, num_threads, s, d);;
 
 
+(** Moves the thread with the given ID from the list of running threads to the list of waiting threads. *)
+let set_thread_as_waiting tid state =
+    let target_thread = get_running_thread tid state in
+    remove_running_thread tid state |> add_waiting_thread target_thread;;
+
+
+(** Moves the thread with the given ID from the list of waiting threads to the list of running threads. *)
+let set_thread_as_running tid state =
+    let target_thread = get_waiting_thread tid state in
+    remove_waiting_thread tid state |> add_running_thread target_thread;;
+
+
+
 (** Returns the statement counter (the number of statements executed thus far) contained in the state passed as a parameter. *)
 let get_stmt_counter = function
     | State (_, _, num_stmts, _, _, _) -> num_stmts;;
@@ -123,7 +141,7 @@ let get_stmt_counter = function
 *)
 let rec update_thread_in_list thread = function
   | [] -> raise Not_found
-  | Thread (_, curr_tid, _, _) :: t when curr_tid = (Thread.get_tid thread) -> thread :: t
+  | Thread (_, curr_tid, _, _, _) :: t when curr_tid = (Thread.get_tid thread) -> thread :: t
   | h :: t -> h :: (update_thread_in_list thread t)
 
   
@@ -159,7 +177,7 @@ let get_sigma = function
     - An empty auxiliary (delta) store.
 *)
 let init prg sigma =
-  State ([(Thread.create prg 0 0)], [], first_stmt_value, root_tid_value + 1,  sigma, Delta.empty_delta);;
+  State ([(Thread.create prg root_tid_value root_tid_value Root)], [], first_stmt_value, root_tid_value + 1,  sigma, Delta.empty_delta);;
 
 
 
@@ -200,6 +218,20 @@ let updated_thread = Thread.next_stmt target_thread in
 match state with
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
 
-
-
 (* last_stmt, is_prg_at_start and is_prg_at_end removed *)
+
+(** Given a state, increments [num_curr_stmt]. *)
+let inc_num_stmts = function
+  | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts + 1, num_threads, s, d);;
+
+(** Given a state, decrements [num_curr_stmt]. *)
+let dec_num_stmts = function
+  | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts - 1, num_threads, s, d);;
+
+(** Given a state, increments [num_curr_thread]. *)
+let inc_num_threads = function
+  | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts, num_threads + 1, s, d);;
+
+(** Given a state, decrements [num_curr_thread]. *)
+let dec_num_threads = function
+  | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts, num_threads - 1, s, d);;
