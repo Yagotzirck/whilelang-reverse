@@ -42,7 +42,7 @@ and ann_stmt ~s:(s : stmt) : stmt_ann =
     | Assign (e1, e2) -> Assign (e1, e2, [])
     | Cadd (e1, e2) -> Cadd (e1, e2, [])
     | Csub (e1, e2) -> Csub (e1, e2, [])
-    | Par (prg1, prg2) -> Par (ann_prg_in_par prg1, ann_prg_in_par prg2)
+    | Par (prg1, prg2) -> Par (ann_prg_in_par prg1, ann_prg_in_par prg2, 0)
 
 (** Annotates a program (by representing it as a zipper structure, among the other things) and its statements.
 
