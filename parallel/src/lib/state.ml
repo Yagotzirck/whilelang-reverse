@@ -65,27 +65,6 @@ let csub ide_name value = function
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts, num_threads, Sigma.csub s ide_name value, d);;
 
 
-(** Given a thread ID and a list of threads, returns the thread in the list matching the ID
-    passed as a parameter, or raises [Not_found] if no thread ID matches the given one.
-
-    Auxiliary function for the functions defined below (not to be used directly outside of this module).
-*)
-let rec get_thread_from_list tid = function
-    | [] -> raise Not_found
-    | Thread (prg, curr_tid, ptid, branch, num_chld_done) :: _ when curr_tid = tid -> Thread (prg, curr_tid, ptid, branch, num_chld_done)
-    | _ :: t -> get_thread_from_list tid t;;
-
-(** Given a thread ID and a list of threads, removes the thread from the list matching the ID
-    passed as a parameter, or raises [Not_found] if no thread ID matches the given one.
-
-    Auxiliary function for the functions defined below (not to be used directly outside of this module).
-*)
-let rec remove_thread_from_list tid = function
-    | [] -> raise Not_found
-    | Thread (_, curr_tid, _, _, _) :: t when curr_tid = tid -> t
-    | h :: t -> h :: remove_thread_from_list tid t;;
-
-
 (** Returns the running thread with the given ID contained inside the specified state parameter. *)
 let get_running_thread tid = function
     | State (t_running, _, _, _, _, _) -> get_thread_from_list tid t_running;;
@@ -134,15 +113,7 @@ let set_thread_as_running tid state =
 let get_stmt_counter = function
     | State (_, _, num_stmts, _, _, _) -> num_stmts;;
 
-(** Given a thread [thread] and a thread list, updates (replaces) the thread in the list
-    having the same ID as [thread] with [thread].
 
-    Auxiliary function for the functions defined below (not to be used directly outside of this module).
-*)
-let rec update_thread_in_list thread = function
-  | [] -> raise Not_found
-  | Thread (_, curr_tid, _, _, _) :: t when curr_tid = (Thread.get_tid thread) -> thread :: t
-  | h :: t -> h :: (update_thread_in_list thread t)
 
   
 (** Pushes the statement counter in the source code stack of the current instruction in the program
@@ -154,11 +125,9 @@ let push_stmt_counter tid state =
     let updated_thread = Thread.push_stmt_counter stmt_counter target_thread in
     
     match state with
-      | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
+      | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (Thread.update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
 
-
-
-
+      
 (* get_program and set_program removed *)
 
 
