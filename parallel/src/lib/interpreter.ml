@@ -3,7 +3,7 @@
 
 open Ast
 open Ast_ann
-open Annotate
+(* open Annotate *)
 
 (* Exceptions' definitions *)
 exception Assignment_to_non_var of string;;
@@ -131,10 +131,6 @@ let exec_par_fwd prg1 prg2 ptid state =
   State.set_thread_as_waiting ptid state |> State.new_running_thread prg2 ptid Right |> State.new_running_thread prg1 ptid Left;;
 
 
-let exec_par_prg_end tid state =
-
-
-
 (** Given a state and a thread ID, performs a single evaluation step in forward execution mode
     in the program associated to the given thread ID, and returns the resulting state.*)
 let sem_stmt_fwd (curr_state : State.state) (tid : int) : State.state =
@@ -146,8 +142,8 @@ let sem_stmt_fwd (curr_state : State.state) (tid : int) : State.state =
     | Cadd (e1, e2, _) -> (cadd e1 e2 curr_state) |> move_to_next_stmt tid
     | Csub (e1, e2, _) -> (csub e1 e2 curr_state) |> move_to_next_stmt tid
 
-    | Par (prg1, prg2, num_chld_done) -> exec_par_fwd prg1 prg2 tid curr_state
-    | Par_prg_end -> curr_state
+    | Par (prg1, prg2, _) -> exec_par_fwd prg1 prg2 tid curr_state
+    | Par_prg_end -> State.handle_finished_par_thread tid curr_state
 
     (* The following statement expressions aren't supposed to be encountered during forward execution *)
     | Program_start -> raise (Illegal_statement_fwd_execution "Program_start")
@@ -156,6 +152,7 @@ let sem_stmt_fwd (curr_state : State.state) (tid : int) : State.state =
   
 
 (** Given a state, performs a single evaluation step in reverse execution mode and returns the resulting state.*)
+(*
 let sem_stmt_rev (curr_state : State.state) : State.state =
   let expr = State.get_prev_stmt curr_state in
   match expr with
@@ -168,6 +165,7 @@ let sem_stmt_rev (curr_state : State.state) : State.state =
     (* The following statement expressions aren't supposed to be encountered during reverse execution *)
     | Program_end -> raise (Illegal_statement_rev_execution "Program_end")
     | Par_prg_end -> raise (Illegal_statement_rev_execution "Par_prg_end");;
+    
 
 
 (** Given a state, evaluates all statements until the end of the program in forward execution mode and returns the resulting state.*)
@@ -220,3 +218,5 @@ let sem_prg_steps curr_state num_steps =
     sem_prg_fwd_steps curr_state num_steps
   else
     sem_prg_rev_steps curr_state (-num_steps);;
+
+    *)
