@@ -1,7 +1,6 @@
 (** Implementation of the state and the functions acting on it.*)
 
 open Ast;;
-open Thread;;
 
 
 (** [state] is a type consisting of a tuple including:
@@ -16,7 +15,7 @@ open Thread;;
     + The program store (sigma);
     + The auxiliary store (delta).
 *)
-type state = State of thread list * thread list * int * int * Sigma.sigma * Delta.delta;;
+type state = State of Thread.thread list * Thread.thread list * int * int * Sigma.sigma * Delta.delta;;
 
 (** Value used to initialize state's [num_curr_stmt] value. *)
 let first_stmt_value = 1;;
@@ -67,7 +66,7 @@ let csub ide_name value = function
 
 (** Returns the running thread with the given ID contained inside the specified state parameter. *)
 let get_running_thread tid = function
-    | State (t_running, _, _, _, _, _) -> get_thread_from_list tid t_running;;
+    | State (t_running, _, _, _, _, _) -> Thread.get_thread_from_list tid t_running;;
 
 (** Adds a thread to the list of running threads inside the specified state parameter. *)
 let add_running_thread thread = function
@@ -80,12 +79,12 @@ let new_running_thread prg ptid branch = function
 
 (** Removes the thread with the given ID from the list of running threads inside the specified state parameter. *)
 let remove_running_thread tid = function
-    | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (remove_thread_from_list tid t_running, t_waiting, num_stmts, num_threads, s, d);;
+    | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (Thread.remove_thread_from_list tid t_running, t_waiting, num_stmts, num_threads, s, d);;
 
 
 (** Returns the waiting thread with the given ID contained inside the specified state parameter. *)
 let get_waiting_thread tid = function
-    | State(_, t_waiting, _, _, _, _) -> get_thread_from_list tid t_waiting;;
+    | State(_, t_waiting, _, _, _, _) -> Thread.get_thread_from_list tid t_waiting;;
 
 (** Adds a thread to the list of waiting threads inside the specified state parameter. *)
 let add_waiting_thread new_thread = function
@@ -93,7 +92,7 @@ let add_waiting_thread new_thread = function
 
 (** Removes the thread with the given ID from the list of waiting threads inside the specified state parameter. *)
 let remove_waiting_thread tid = function
-    | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, remove_thread_from_list tid t_waiting, num_stmts, num_threads, s, d);;
+    | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, Thread.remove_thread_from_list tid t_waiting, num_stmts, num_threads, s, d);;
 
 
 (** Moves the thread with the given ID from the list of running threads to the list of waiting threads. *)
@@ -163,7 +162,7 @@ let prev_stmt tid state =
     let target_thread = get_running_thread tid state in
     let updated_thread = Thread.prev_stmt target_thread in
     match state with
-      | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
+      | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (Thread.update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
 
 
 (** This is a wrapper which applies {!val:Thread.get_prev_stmt} to the thread having the
@@ -185,7 +184,7 @@ let next_stmt tid state =
 let target_thread = get_running_thread tid state in
 let updated_thread = Thread.next_stmt target_thread in
 match state with
-  | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
+  | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (Thread.update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
 
 (* last_stmt, is_prg_at_start and is_prg_at_end removed *)
 
@@ -204,3 +203,51 @@ let inc_num_threads = function
 (** Given a state, decrements [num_curr_thread]. *)
 let dec_num_threads = function
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts, num_threads - 1, s, d);;
+
+
+(** Handles the forward execution of statement {!val:Program_ann.Par_prg_end}
+    (that is, a child thread terminated its program execution) at state level.
+
+    The following steps are performed:
+
+    + The child thread and the parent thread are retrieved from the state;
+    + The child thread's program is put into the [Par] statement contained in the parent thread's
+      program, by calling {!val:Thread.update_par_prg_fwd};
+    + The child thread is removed from the running threads (since it terminated its execution);
+    + The parent thread is removed from the waiting threads (since it must be replaced by the updated version);
+    + The updated parent thread is added to the state; if all its child threads finished their execution, the parent thread
+      is placed in the running threads' list and its current program statement advances to the next one, otherwise it's placed
+      in the waiting threads' list.
+    
+
+@param tid The thread ID of the child thread which terminated its execution.
+@param state The state to update.
+
+@return The updated state.
+*)
+let handle_finished_par_thread ~tid ~state =
+  let get_parent_thread thread state = 
+    let ptid = Thread.get_ptid thread in
+    get_waiting_thread ptid state
+  
+  in
+
+  let add_updated_parent_thread parent_thread state =
+    let ptid = Thread.get_tid parent_thread in
+
+    (* If both child threads finished their execution, put the updated parent in the list of running threads *)
+    if Thread.is_children_execution_done parent_thread then
+      add_running_thread parent_thread state |> next_stmt ptid
+    else
+    (* If only one child thread finished its execution, put the updated parent in the list of waiting threads
+        ( we must wait for the other child thread to finish as well before resuming the parent's execution)
+    *)
+      add_waiting_thread parent_thread state
+  in
+
+  let finished_par_thread = get_running_thread tid state in
+  let parent_thread = get_parent_thread finished_par_thread state in
+  let updated_parent_thread = Thread.update_par_prg_fwd finished_par_thread parent_thread in
+  let ptid = Thread.get_tid updated_parent_thread in
+  
+  remove_running_thread tid state |> remove_waiting_thread ptid |> add_updated_parent_thread updated_parent_thread;;
