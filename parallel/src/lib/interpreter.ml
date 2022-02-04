@@ -131,9 +131,9 @@ let exec_par_fwd prg1 prg2 ptid state =
   State.set_thread_as_waiting ptid state |> State.new_running_thread prg2 ptid Right |> State.new_running_thread prg1 ptid Left;;
 
 
-(** Given a state and a thread ID, performs a single evaluation step in forward execution mode
+(** Given a thread ID and a state, performs a single evaluation step in forward execution mode
     in the program associated to the given thread ID, and returns the resulting state.*)
-let sem_stmt_fwd (curr_state : State.state) (tid : int) : State.state =
+let sem_stmt_fwd (tid : int) (curr_state : State.state) : State.state =
   let expr = State.get_curr_stmt tid curr_state in
   match expr with
     | Program_end -> curr_state
