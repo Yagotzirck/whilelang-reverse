@@ -2,11 +2,6 @@
 
 open Ast_ann
 
-(** type used in the [thread] tuple, to discern whether the thread contains a program
-    contained in the first (Left) or in the second (Right) element of the [Par] statement
-    of the parent thread that created it.
-*)
-type child_branch = Left | Right | Root;;
 
 (** A thread is a tuple containing the following fields:
 
@@ -17,15 +12,53 @@ type child_branch = Left | Right | Root;;
   + [ptid]:           An integer value that identifies the parent thread's ID
                       (that is, the [tid] of the thread that generated this thread);
   + [branch]:         A variable of type [child_branch], indicating whether the thread is
-                      a [Left] child or a [Right] child;
+                      a [Left] child, a [Right] child, or the [Root] thread;
 *)
-type thread = Thread of program_ann * int * int * child_branch;;
+type thread = Thread of program_ann * int * int * Program.child_branch;;
 
 (** Creates and returns a new thread, initializing it with the given parameters
     (annotated program, thread id, id of the thread who requested the creation, and branch).
 *)
 let create prg tid ptid branch =
   Thread (prg, tid, ptid, branch);;
+
+(** Given a thread, returns the annotated program contained in it. *)
+let get_program = function
+  | Thread (prg, _, _, _) -> prg;;
+
+(** Handles the forward execution of statement {!val:Program.Par_prg_end}
+    (that is, a child thread terminated its program execution) at thread level.
+
+    The following steps are performed:
+
+    + The child thread branch is retrieved, in order to determine whether the program contained in the child thread belongs
+      to the first or the second program inside the {!val:Program.Par} statement of the parent thread;
+    + The {!val:Program.Par} program branch contained in the parent thread is updated, according to the branch retrieved from
+      the previous step.
+
+@param t_chld The child thread containing the program to be put inside [t_parent]'s [Par] statement.
+@param t_parent The parent thread whose current statement is the [Par] statement to be updated with the finished child thread's program.
+
+@return The updated parent thread.
+
+*)
+let update_par_prg_fwd ~t_chld ~t_parent =
+  let get_child_branch = function
+    | Thread (_, _, _, branch) -> branch
+  in
+
+  match t_parent with
+    | Thread (prg, tid, ptid, branch) -> Thread (Program.update_par_prg_fwd (get_child_branch t_chld) (get_program t_chld) prg, tid, ptid, branch);;
+
+
+(** Given a waiting thread, returns a boolean value indicating whether its children
+    are done with their execution ([true]) or not ([false]).
+
+    This is a wrapper which applies {!val:Program.is_children_execution_done} to the program contained inside the specified
+    thread parameter.
+*)
+let is_children_execution_done = function
+  | Thread (prg, _, _, _) -> Program.is_children_execution_done prg;;
 
 (** This is a wrapper which applies {!val:Program.prev_stmt} to the program contained inside the specified
     thread parameter.
@@ -75,6 +108,10 @@ let pop_prev_stmt_counter = function
 (** Given a thread, returns its ID. *)
 let get_tid = function
   | Thread (_, tid, _, _) -> tid;;
+
+(** Given a thread, returns its parent thread ID. *)
+let get_ptid = function
+  | Thread (_, _, ptid, _) -> ptid;;
 
 
 (** Given a thread ID and a list of threads, returns the thread in the list matching the ID
