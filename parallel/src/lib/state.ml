@@ -258,7 +258,7 @@ let handle_finished_par_thread_fwd ~tid ~state =
 
     (* If both child threads finished their execution, put the updated parent in the list of running threads *)
     if Thread.is_children_execution_done parent_thread then
-      add_running_thread parent_thread state |> next_stmt ptid
+      add_running_thread parent_thread state |> move_to_next_stmt ptid
     else
     (* If only one child thread finished its execution, put the updated parent in the list of waiting threads
         ( we must wait for the other child thread to finish as well before resuming the parent's execution)
