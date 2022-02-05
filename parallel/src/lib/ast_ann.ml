@@ -51,7 +51,7 @@ type program_ann =
 (** Statements must be annotated as well with the following additions:
     + [Program_start] and [Program_end], in order to set boundaries for the whole program;
     + [Par_prg_start] and [Par_prg_end], in order to set boundaries for programs contained inside the [Par] statements;
-    + An [int list] for each statement (except for boundary-tracking statements and Par), in order to keep track of the statements' execution order;
+    + An [int list] for each statement (except for boundary-tracking statements), in order to keep track of the statements' execution order;
     + An [int] value for the [Par] statement, used to keep track of how many child threads containing the two programs are done with their execution (values' range: 0-2).
 
     As for 3), a scalar would probably have sufficed instead of a list since we aren't using any loops in the parallel version
@@ -70,5 +70,5 @@ and stmt_ann =
   | Cadd of int_expr * int_expr * int list (** Constructive assignment ("+="); must check about 1st [int_expr] being {!constructor:Ast.int_expr.Val} *)
   | Csub of int_expr * int_expr * int list (** Constructive assignment ("-="); must check about 1st [int_expr] being {!constructor:Ast.int_expr.Val} *)
 
-  | Par of program_ann * program_ann * int;;
+  | Par of program_ann * program_ann * int * int list;;
 ;;
