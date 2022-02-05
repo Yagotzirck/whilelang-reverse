@@ -77,13 +77,14 @@ let push_stmt_counter stmt_counter prg =
     | Program_end -> raise (Statement_without_stack "Program_end")
     | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
     | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
-    | Par (_, _, _) -> raise (Statement_without_stack "Par")
 
     | Skip stmt_stk -> Skip (stmt_counter :: stmt_stk)
     | Assign (e1, e2, stmt_stk) -> Assign (e1, e2, stmt_counter :: stmt_stk)
 
     | Cadd (e1, e2, stmt_stk) -> Cadd (e1, e2, stmt_counter :: stmt_stk)
     | Csub (e1, e2, stmt_stk) -> Csub (e1, e2, stmt_counter :: stmt_stk)
+
+    | Par (prg1, prg2, num_chld_done, stmt_stk) -> Par (prg1, prg2, num_chld_done, stmt_counter :: stmt_stk)
 
   in
   match prg with
@@ -96,7 +97,6 @@ let push_stmt_counter stmt_counter prg =
     | Program_end -> raise (Statement_without_stack "Program_end")
     | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
     | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
-    | Par (_, _, _) -> raise (Statement_without_stack "Par")
 
 
     | Skip [] -> raise (Statement_empty_stack "Skip")
@@ -111,6 +111,9 @@ let push_stmt_counter stmt_counter prg =
     | Csub (_, _, []) -> raise (Statement_empty_stack "Csub")
     | Csub (_, _, h :: _) -> h
 
+    | Par (_, _, _, []) -> raise (Statement_empty_stack "Par")
+    | Par (_, _, _, h :: _) -> h
+
   in
   match prg with
     | Program_ann ([], _, _) -> raise No_previous_statements
@@ -123,8 +126,7 @@ let push_stmt_counter stmt_counter prg =
       | Program_end -> raise (Statement_without_stack "Program_end")
       | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
       | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
-      | Par (_, _, _) -> raise (Statement_without_stack "Par")
-  
+
   
       | Skip [] -> raise (Statement_empty_stack "Skip")
       | Skip (_ :: t) -> Skip t
@@ -137,6 +139,9 @@ let push_stmt_counter stmt_counter prg =
   
       | Csub (_, _, []) -> raise (Statement_empty_stack "Csub")
       | Csub (e1, e2, _ :: t) -> Csub (e1, e2, t)
+
+      | Par (_, _, _, []) -> raise (Statement_empty_stack "Par")
+      | Par (prg1, prg2, num_chld_done, _ :: t) -> Par (prg1, prg2, num_chld_done, t)
   
     in
     match prg with
@@ -169,12 +174,12 @@ let update_par_prg_fwd ~chld_branch ~chld_prg ~parent_prg =
     | (Root, Program_ann _) -> raise Root_thread_par_update 
 
     (* Update the first program in the parent thread program's Par() statement *)
-    | (Left, Program_ann (prev_stmts, Par(_, prg2, num_chld_done), next_stmts ) ) ->
-      Program_ann (prev_stmts, Par (chld_prg, prg2, num_chld_done + 1), next_stmts)
+    | (Left, Program_ann (prev_stmts, Par(_, prg2, num_chld_done, stmt_stk), next_stmts ) ) ->
+      Program_ann (prev_stmts, Par (chld_prg, prg2, num_chld_done + 1, stmt_stk), next_stmts)
 
     (* Update the second program in the parent thread program's Par() statement *)
-    | (Right, Program_ann (prev_stmts, Par(prg1, _, num_chld_done), next_stmts ) ) ->
-      Program_ann (prev_stmts, Par (prg1, chld_prg, num_chld_done + 1), next_stmts)
+    | (Right, Program_ann (prev_stmts, Par(prg1, _, num_chld_done, stmt_stk), next_stmts ) ) ->
+      Program_ann (prev_stmts, Par (prg1, chld_prg, num_chld_done + 1, stmt_stk), next_stmts)
     
     (* The current statement in the parent thread program is not Par(); raise an exception *)
     | (_, Program_ann _) -> raise Parent_curr_stmt_not_Par;;
@@ -187,5 +192,5 @@ let update_par_prg_fwd ~chld_branch ~chld_prg ~parent_prg =
         (and therefore we're most likely not dealing with a waiting thread).
 *)
   let is_children_execution_done = function
-      | Program_ann (_, Par (_, _, num_chld_done), _) -> num_chld_done = max_num_chld_threads
+      | Program_ann (_, Par (_, _, num_chld_done, _), _) -> num_chld_done = max_num_chld_threads
       | Program_ann _ -> raise Parent_curr_stmt_not_Par;;
