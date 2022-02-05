@@ -186,7 +186,18 @@ let updated_thread = Thread.next_stmt target_thread in
 match state with
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (Thread.update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
 
-(* last_stmt, is_prg_at_start and is_prg_at_end removed *)
+
+let get_last_executed_thread = function
+  | State (t_running, t_waiting, num_stmts, num_threads, s, d) ->
+      let num_last_stmt = num_stmts - 1 in
+
+
+let get_last_executed_stmt = function
+  | State (t_running, t_waiting, num_stmts, num_threads, s, d) ->
+
+  
+
+
 
 (** Given a state, increments [num_curr_stmt]. *)
 let inc_num_stmts = function
@@ -203,6 +214,16 @@ let inc_num_threads = function
 (** Given a state, decrements [num_curr_thread]. *)
 let dec_num_threads = function
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts, num_threads - 1, s, d);;
+
+(** Given a thread ID and a state, performs the following operations:
+
+  + Pushes the statement counter onto the current statement's source code stack;
+  + Increments the state's statement counter by 1;
+  + Moves the current instruction of the program contained in the given thread ID to the next instruction;
+  + Returns the updated state.
+*)
+let move_to_next_stmt tid state =
+  State.push_stmt_counter tid state |> State.inc_num_stmts |> State.next_stmt tid;;
 
 
 (** Handles the forward execution of statement {!val:Program_ann.Par_prg_end}
@@ -225,7 +246,7 @@ let dec_num_threads = function
 
 @return The updated state.
 *)
-let handle_finished_par_thread ~tid ~state =
+let handle_finished_par_thread_fwd ~tid ~state =
   let get_parent_thread thread state = 
     let ptid = Thread.get_ptid thread in
     get_waiting_thread ptid state
