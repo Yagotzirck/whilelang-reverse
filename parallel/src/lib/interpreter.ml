@@ -116,9 +116,19 @@ let csub ~e1 ~e2 ~state =
 
 
 
-let exec_par prg1 prg2 ptid state =
-  State.set_thread_as_waiting ptid state |> State.new_running_thread prg2 ptid Right |> State.new_running_thread prg1 ptid Left;;
+let exec_par_fwd prg1 prg2 ptid state =
+  State.move_to_next_stmt ptid state |> State.set_thread_as_waiting ptid |> State.new_running_thread prg2 ptid Program.Right |> State.new_running_thread prg1 ptid Program.Left;;
 
+let exec_par_rev prg ptid state =
+  let adjusted_state = State.pop_prev_stmt_counter ptid state |> State.set_thread_as_waiting ptid |> State.dec_prev_par_finished_children ptid in
+  let num_last_stmt = (State.get_stmt_counter state) - 1 in
+  
+  match Program.get_last_executed_par_prg num_last_stmt prg with
+    (* If the program is found, create a thread containing the given program in the list of running threads *)
+    | Some (prg, branch) -> State.new_running_thread prg ptid branch adjusted_state
+
+    (* If the program wasn't found in the programs contained in Par program, raise an exception *)
+    | None -> raise State.Last_executed_stmt_not_found;;
 
 
 
@@ -134,7 +144,7 @@ let sem_stmt_fwd (tid : int) (curr_state : State.state) : State.state =
     | Cadd (e1, e2, _) -> (cadd e1 e2 curr_state) |> State.move_to_next_stmt tid
     | Csub (e1, e2, _) -> (csub e1 e2 curr_state) |> State.move_to_next_stmt tid
 
-    | Par (prg1, prg2, _) -> exec_par prg1 prg2 tid curr_state
+    | Par (prg1, prg2, _, _) -> exec_par_fwd prg1 prg2 tid curr_state
     | Par_prg_end -> State.handle_finished_par_thread_fwd tid curr_state
 
     (* The following statement expressions aren't supposed to be encountered during forward execution *)
@@ -147,23 +157,28 @@ let sem_stmt_fwd (tid : int) (curr_state : State.state) : State.state =
     by retrieving the last statement previously executed in forward execution mode,
     and returns the resulting state.
 *)
-let sem_stmt_rev (tid : int) (curr_state : State.state) : State.state =
-  let expr = State.get_prev_stmt curr_state in
+let sem_stmt_rev (curr_state : State.state) : State.state =
+  let adj_state = State.adjust_state_for_rev_semantics curr_state in
+  let last_executed_thread = State.get_last_executed_thread adj_state in
+  let tid = Thread.get_tid last_executed_thread in
+  let expr = State.get_prev_stmt tid adj_state in
   match expr with
-    | Program_start -> curr_state
-    | Skip _ -> move_to_pr
-    | Assign (e1, _, _) -> (assign_var_rev e1 curr_state) |> State.prev_stmt
-    | Cadd (e1, e2, _) -> (csub e1 e2 curr_state) |> State.prev_stmt
-    | Csub (e1, e2, _) -> (cadd e1 e2 curr_state) |> State.prev_stmt
+    | Program_start -> adj_state
+    | Skip _ -> State.move_to_prev_stmt tid adj_state
+    | Assign (e1, _, _) -> (assign_var_rev e1 adj_state) |> State.move_to_prev_stmt tid
+    | Cadd (e1, e2, _) -> (csub e1 e2 adj_state) |> State.move_to_prev_stmt tid
+    | Csub (e1, e2, _) -> (cadd e1 e2 adj_state) |> State.move_to_prev_stmt tid
 
-    | Par (prg1, prg2, _) -> exec_par prg1 prg2 tid curr_state
-    | Par_prg_start -> State.handle_finished_par_thread_rev tid curr_state
-
+    | Par _ -> exec_par_rev (Thread.get_program last_executed_thread) tid adj_state
+    
     (* The following statement expressions aren't supposed to be encountered during reverse execution *)
     | Program_end -> raise (Illegal_statement_rev_execution "Program_end")
+
+    | Par_prg_start -> raise (Illegal_statement_rev_execution "Par_prg_start")
     | Par_prg_end -> raise (Illegal_statement_rev_execution "Par_prg_end");;
     
 
+(*
 
 (** Given a state, evaluates all statements until the end of the program in forward execution mode and returns the resulting state.*)
 let rec sem_prg_fwd curr_state =
@@ -216,4 +231,5 @@ let sem_prg_steps curr_state num_steps =
   else
     sem_prg_rev_steps curr_state (-num_steps);;
 
-    *)
+
+*)
