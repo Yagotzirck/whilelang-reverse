@@ -10,7 +10,7 @@ exception Statement_without_stack of string;;
 exception Statement_empty_stack of string;;
 
 exception Root_thread_par_update;;
-exception Parent_curr_stmt_not_Par;;
+exception Prev_stmt_not_Par;;
 
 (** type used to discern whether the thread contains a program
     contained in the first (Left) or in the second (Right) element of the [Par] statement
@@ -159,13 +159,13 @@ let is_par_prg_at_end = function
 
 @param  chld_branch The child thread's branch ([Left] or [Right]) to determine whether the program contained in the child thread belongs
         to the first or the second program inside the {!val:Program_ann.Par} statement of the parent thread.
-        If it's [Root], then an exception is raised;
+        If it's [Root], then an exception is raised.
 @param  t_parent The parent thread whose current statement is the [Par] statement to be updated with the finished child thread's program.
 
 @return The updated parent program.
 
 @raise  Root_thread_par_update if [chld_branch] is [Root].
-@raise  Parent_curr_stmt_not_Par if the parent program's current statement is not [Par].
+@raise  Prev_stmt_not_Par if the parent program's previous statement is not [Par].
 
 *)
 let update_par_prg_fwd ~chld_branch ~chld_prg ~parent_prg =
@@ -174,23 +174,61 @@ let update_par_prg_fwd ~chld_branch ~chld_prg ~parent_prg =
     | (Root, Program_ann _) -> raise Root_thread_par_update 
 
     (* Update the first program in the parent thread program's Par() statement *)
-    | (Left, Program_ann (prev_stmts, Par(_, prg2, num_chld_done, stmt_stk), next_stmts ) ) ->
-      Program_ann (prev_stmts, Par (chld_prg, prg2, num_chld_done + 1, stmt_stk), next_stmts)
+    | (Left, Program_ann (Par(_, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ) ->
+      Program_ann (Par (chld_prg, prg2, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts)
 
     (* Update the second program in the parent thread program's Par() statement *)
-    | (Right, Program_ann (prev_stmts, Par(prg1, _, num_chld_done, stmt_stk), next_stmts ) ) ->
-      Program_ann (prev_stmts, Par (prg1, chld_prg, num_chld_done + 1, stmt_stk), next_stmts)
+    | (Right, Program_ann (Par(prg1, _, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ) ->
+      Program_ann (Par (prg1, chld_prg, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts)
     
-    (* The current statement in the parent thread program is not Par(); raise an exception *)
-    | (_, Program_ann _) -> raise Parent_curr_stmt_not_Par;;
+    (* The previous statement in the parent thread program is not Par(); raise an exception *)
+    | (_, Program_ann _) -> raise Prev_stmt_not_Par;;
 
 
 (** Given a waiting thread's program, returns a boolean value indicating whether its children
     are done with their execution ([true]) or not ([false]).
 
-@raise  Parent_curr_stmt_not_Par if the parent program's current statement is not [Par]
+@raise  Prev_stmt_not_Par if the parent program's previous statement is not [Par]
         (and therefore we're most likely not dealing with a waiting thread).
 *)
-  let is_children_execution_done = function
-      | Program_ann (_, Par (_, _, num_chld_done, _), _) -> num_chld_done = max_num_chld_threads
-      | Program_ann _ -> raise Parent_curr_stmt_not_Par;;
+let is_children_execution_done = function
+    | Program_ann (Par (_, _, num_chld_done, _) :: _, _, _) -> num_chld_done = max_num_chld_threads
+    | Program_ann _ -> raise Prev_stmt_not_Par;;
+    
+  (** Given a waiting thread's program, returns a boolean value indicating whether its
+      previous statement is [Par] ([true]) or not ([false]).
+  *)
+ let is_prev_stmt_par = function
+  | Program_ann (Par _ :: _, _, _) -> true
+  | Program_ann _ -> false;;
+
+
+(** Given an int value representing the last statement's execution counter and
+    a program whose previous statement is [Par], returns a pair [Some (prg, branch)]
+    if the [Par statement] contains the last executed instruction in one of its two programs
+    (indicated by [branch]), [None] otherwise.
+*)
+let get_last_executed_par_prg num_last_stmt = function
+  | Program_ann (Par (prg1, prg2, _, _) :: _, _, _) ->
+      if top_prev_stmt_counter prg1 = num_last_stmt then
+        Some (prg1, Left)
+      else
+      if top_prev_stmt_counter prg2 = num_last_stmt then
+        Some (prg2, Right)
+      else
+        None
+        
+  | Program_ann _ -> raise Prev_stmt_not_Par;;
+
+
+let inc_prev_par_finished_children = function
+  | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
+      Program_ann (Par (prg1, prg2, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
+  
+  | Program_ann _ -> raise Prev_stmt_not_Par;;
+
+let dec_prev_par_finished_children = function
+  | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
+      Program_ann (Par (prg1, prg2, num_chld_done - 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
+  
+  | Program_ann _ -> raise Prev_stmt_not_Par;;
