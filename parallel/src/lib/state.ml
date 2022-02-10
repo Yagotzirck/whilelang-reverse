@@ -364,3 +364,27 @@ let inc_prev_par_finished_children tid state =
 let dec_prev_par_finished_children tid state =
   let updated_thread = get_waiting_thread tid state |> Thread.dec_prev_par_finished_children in
     update_waiting_thread updated_thread state;;
+
+(** Returns a boolean value indicating whether the program's current statement/instruction
+    in the given [state] is the main program's first statement/instruction. *)
+let is_prg_at_start state =
+  try
+  get_prev_stmt root_tid_value state = Program_start
+  with
+    | Thread.Thread_not_found -> false;;
+
+
+(** Given a thread ID and a state, returns a boolean value indicating whether the program
+    contained in the given thread is the main program's last statement/instruction. *)
+let is_thread_at_end tid state =
+  let curr_stmt = get_curr_stmt tid state in
+  curr_stmt = Par_prg_end || curr_stmt = Program_end;;
+
+(** Given a state, resets the [num_threads] value to the initial value.
+    Used when the program execution reaches the end in forward execution mode or
+    the beginning in reverse execution mode, since at those points we know the only
+    active thread is the root thread (and therefore [num_threads] can be reset to the value
+    coming after [root_tid_value], since it won't overlap with any existing threads' IDs.)
+*)
+let reset_num_threads = function
+  | State (t_running, t_waiting, num_stmts, _, s, d) -> State (t_running, t_waiting, num_stmts, root_tid_value + 1, s, d);;
