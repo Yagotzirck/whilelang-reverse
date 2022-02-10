@@ -2,6 +2,8 @@
 
 open Ast_ann
 
+exception Thread_not_found;;
+
 
 (** A thread is a tuple containing the following fields:
 
@@ -115,18 +117,18 @@ let get_ptid = function
 
 
 (** Given a thread ID and a list of threads, returns the thread in the list matching the ID
-    passed as a parameter, or raises [Not_found] if no thread ID matches the given one.
+    passed as a parameter, or raises [Thread_not_found] if no thread ID matches the given one.
 *)
 let rec get_thread_from_list tid = function
-    | [] -> raise Not_found
+    | [] -> raise Thread_not_found
     | Thread (prg, curr_tid, ptid, branch) :: _ when curr_tid = tid -> Thread (prg, curr_tid, ptid, branch)
     | _ :: t -> get_thread_from_list tid t;;
 
 (** Given a thread ID and a list of threads, removes the thread from the list matching the ID
-    passed as a parameter, or raises [Not_found] if no thread ID matches the given one.
+    passed as a parameter, or raises [Thread_not_found] if no thread ID matches the given one.
 *)
 let rec remove_thread_from_list tid = function
-    | [] -> raise Not_found
+    | [] -> raise Thread_not_found
     | Thread (_, curr_tid, _, _) :: t when curr_tid = tid -> t
     | h :: t -> h :: remove_thread_from_list tid t;;
 
@@ -134,7 +136,7 @@ let rec remove_thread_from_list tid = function
     having the same ID as [thread] with [thread].
 *)
 let rec update_thread_in_list thread = function
-  | [] -> raise Not_found
+  | [] -> raise Thread_not_found
   | Thread (_, curr_tid, _, _) :: t when curr_tid = (get_tid thread) -> thread :: t
   | h :: t -> h :: (update_thread_in_list thread t);;
 
