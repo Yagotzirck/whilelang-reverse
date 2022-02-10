@@ -138,7 +138,7 @@ let exec_par_rev prg ptid state =
 let sem_stmt_fwd (tid : int) (curr_state : State.state) : State.state =
   let expr = State.get_curr_stmt tid curr_state in
   match expr with
-    | Program_end -> curr_state
+    | Program_end -> State.reset_num_threads curr_state
     | Skip _ ->  State.move_to_next_stmt tid curr_state
     | Assign (e1, e2, _) -> (assign_var_fwd e1 e2 curr_state) |> State.move_to_next_stmt tid
     | Cadd (e1, e2, _) -> (cadd e1 e2 curr_state) |> State.move_to_next_stmt tid
@@ -162,8 +162,9 @@ let sem_stmt_rev (curr_state : State.state) : State.state =
   let last_executed_thread = State.get_last_executed_thread adj_state in
   let tid = Thread.get_tid last_executed_thread in
   let expr = State.get_prev_stmt tid adj_state in
+
   match expr with
-    | Program_start -> adj_state
+    | Program_start -> State.reset_num_threads adj_state
     | Skip _ -> State.move_to_prev_stmt tid adj_state
     | Assign (e1, _, _) -> (assign_var_rev e1 adj_state) |> State.move_to_prev_stmt tid
     | Cadd (e1, e2, _) -> (csub e1 e2 adj_state) |> State.move_to_prev_stmt tid
@@ -178,33 +179,43 @@ let sem_stmt_rev (curr_state : State.state) : State.state =
     | Par_prg_end -> raise (Illegal_statement_rev_execution "Par_prg_end");;
     
 
-(*
 
-(** Given a state, evaluates all statements until the end of the program in forward execution mode and returns the resulting state.*)
-let rec sem_prg_fwd curr_state =
-  if not (State.is_prg_at_end curr_state) then
-    sem_prg_fwd (sem_stmt_fwd curr_state)
+(** Given a thread ID and a state, evaluates all statements in forward execution mode until the end
+    of the program contained in the specified thread, and returns the resulting state (in other words,
+    it executes the whole program contained in the specified thread.)
+*)
+let rec sem_prg_fwd tid curr_state =
+  if not (State.is_thread_at_end tid curr_state) then
+    sem_prg_fwd tid (sem_stmt_fwd tid curr_state)
   else
-    curr_state;;
+    (*  Program reached its end; perform one more step to terminate the child thread (Par_prg_end),
+        or reset num_threads if we're in the root thread (Program_end)
+    *)
+    sem_stmt_fwd tid curr_state;; 
 
 (** Given a state, evaluates all statements until the beginning of the program in reverse execution mode and returns the resulting state.*)
 let rec sem_prg_rev curr_state =
   if not (State.is_prg_at_start curr_state) then
     sem_prg_rev (sem_stmt_rev curr_state)
   else
-    curr_state;;
+    (*  Program reached its beginning; perform one more step to reset num_threads *)
+        sem_stmt_rev curr_state;;
 
-(** Given a state [curr_state] and a specified [num_steps] integer, let [remaining_stmts] be the number of statements 
-    between the current statement in [curr_state]'s program and the [Program_end] boundary statement; then the function
+
+(** Given a thread ID [tid], a state [curr_state] and a specified [num_steps] integer, let [remaining_stmts] be the number of statements 
+    between the current statement in [tid]'s program and the [Program_end] / [Par_prg_end] boundary statement; then the function
     performs min([remaining_stmts], [num_steps]) statement evaluations in forward execution mode and returns the resulting state.
 
     If [num_steps] <= 0, [curr_state] is returned unaltered.
 *)
-let rec sem_prg_fwd_steps curr_state num_steps =
-  if not (State.is_prg_at_end curr_state) && num_steps > 0 then
-    sem_prg_fwd_steps (sem_stmt_fwd curr_state) (num_steps - 1)
+let rec sem_prg_fwd_steps tid curr_state num_steps =
+  if not (State.is_thread_at_end tid curr_state) && num_steps > 0 then
+    sem_prg_fwd_steps tid (sem_stmt_fwd tid curr_state) (num_steps - 1)
   else
-    curr_state;;
+    (*  Program reached its end; perform one more step to terminate the child thread (Par_prg_end),
+        or reset num_threads if we're in the root thread (Program_end)
+    *)
+        sem_stmt_fwd tid curr_state;; 
 
 (** Given a state [curr_state] and a specified [num_steps] integer, let [remaining_stmts] be the number of statements 
     between the current statement in [curr_state]'s program and the [Program_start] boundary statement; then the function
@@ -216,20 +227,5 @@ let rec sem_prg_fwd_steps curr_state num_steps =
   if not (State.is_prg_at_start curr_state) && num_steps > 0 then
     sem_prg_rev_steps (sem_stmt_rev curr_state) (num_steps -1)
   else
-    curr_state;;
-
-
-(** Given a state [curr_state] and a specified [num_steps] integer, it acts as an interface allowing both forward and reverse
-    execution by calling
-      - {!val:sem_prg_fwd_steps} (forward execution), if [num_steps] >= 0;
-      - {!val:sem_prg_rev_steps} (reverse execution), if [num_steps] < 0 (in this case, [num_steps]'s sign gets inverted to obtain the
-        positive amount of steps to execute to pass to {!val:sem_prg_rev_steps} as parameter.)
-*)
-let sem_prg_steps curr_state num_steps =
-  if num_steps >= 0 then
-    sem_prg_fwd_steps curr_state num_steps
-  else
-    sem_prg_rev_steps curr_state (-num_steps);;
-
-
-*)
+    (*  Program reached its beginning; perform one more step to reset num_threads *)
+    sem_stmt_rev curr_state;;
