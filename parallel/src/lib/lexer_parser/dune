@@ -1,0 +1,10 @@
+(library
+ (name lexer_parser)
+ (libraries par_interp)
+)
+
+(menhir
+ (modules parser)
+)
+
+(ocamllex lexer)
