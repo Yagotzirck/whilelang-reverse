@@ -29,7 +29,7 @@ let open_arg_file =
       open_in filename
     
     | _ ->
-      Printf.eprintf "Usage: whilelang_main <source file>\n";
+      Printf.eprintf "Usage: whilelang_serial <source file>\n";
       exit 1;;
 let main =
   let in_ch = open_arg_file in
