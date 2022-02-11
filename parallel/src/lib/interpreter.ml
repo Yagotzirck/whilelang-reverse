@@ -202,30 +202,30 @@ let rec sem_prg_rev curr_state =
         sem_stmt_rev curr_state;;
 
 
-(** Given a thread ID [tid], a state [curr_state] and a specified [num_steps] integer, let [remaining_stmts] be the number of statements 
+(** Given a thread ID [tid], specified [num_steps] integer and a state [curr_state], let [remaining_stmts] be the number of statements 
     between the current statement in [tid]'s program and the [Program_end] / [Par_prg_end] boundary statement; then the function
     performs min([remaining_stmts], [num_steps]) statement evaluations in forward execution mode and returns the resulting state.
 
     If [num_steps] <= 0, [curr_state] is returned unaltered.
 *)
-let rec sem_prg_fwd_steps tid curr_state num_steps =
+let rec sem_prg_fwd_steps tid num_steps curr_state =
   if not (State.is_thread_at_end tid curr_state) && num_steps > 0 then
-    sem_prg_fwd_steps tid (sem_stmt_fwd tid curr_state) (num_steps - 1)
+    sem_prg_fwd_steps tid (num_steps - 1) (sem_stmt_fwd tid curr_state)
   else
     (*  Program reached its end; perform one more step to terminate the child thread (Par_prg_end),
         or reset num_threads if we're in the root thread (Program_end)
     *)
         sem_stmt_fwd tid curr_state;; 
 
-(** Given a state [curr_state] and a specified [num_steps] integer, let [remaining_stmts] be the number of statements 
+(** Given a specified [num_steps] integer and a state [curr_state], let [remaining_stmts] be the number of statements 
     between the current statement in [curr_state]'s program and the [Program_start] boundary statement; then the function
     performs min([remaining_stmts], [num_steps]) statement evaluations in reverse execution mode and returns the resulting state.
 
     If [num_steps] <= 0, [curr_state] is returned unaltered.
 *)
-    let rec sem_prg_rev_steps curr_state num_steps =
+    let rec sem_prg_rev_steps num_steps curr_state  =
   if not (State.is_prg_at_start curr_state) && num_steps > 0 then
-    sem_prg_rev_steps (sem_stmt_rev curr_state) (num_steps -1)
+    sem_prg_rev_steps (num_steps -1) (sem_stmt_rev curr_state)
   else
     (*  Program reached its beginning; perform one more step to reset num_threads *)
     sem_stmt_rev curr_state;;
