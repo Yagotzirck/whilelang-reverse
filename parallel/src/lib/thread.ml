@@ -28,6 +28,18 @@ let create prg tid ptid branch =
 let get_program = function
   | Thread (prg, _, _, _) -> prg;;
 
+(** Given a thread, returns its thread ID. *)
+let get_tid = function
+  | Thread (_, tid, _, _) -> tid;;
+
+(** Given a thread, returns its parent thread ID. *)
+let get_ptid = function
+  | Thread (_, _, ptid, _) -> ptid;;
+
+(** Given a thread, returns its child branch (Left, Right, or Root.) *)
+let get_child_branch = function
+  | Thread (_, _, _, branch) -> branch;;
+
 (** Handles the forward execution of statement {!val:Program.Par_prg_end}
     (that is, a child thread terminated its program execution) at thread level.
 
@@ -45,10 +57,6 @@ let get_program = function
 
 *)
 let update_par_prg_fwd ~t_chld ~t_parent =
-  let get_child_branch = function
-    | Thread (_, _, _, branch) -> branch
-  in
-
   match t_parent with
     | Thread (prg, tid, ptid, branch) -> Thread (Program.update_par_prg_fwd (get_child_branch t_chld) (get_program t_chld) prg, tid, ptid, branch);;
 
@@ -105,16 +113,6 @@ let top_prev_stmt_counter = function
 *)
 let pop_prev_stmt_counter = function
   | Thread (prg, tid, ptid, branch) -> Thread (Program.pop_prev_stmt_counter prg, tid, ptid, branch);;
-
-
-(** Given a thread, returns its ID. *)
-let get_tid = function
-  | Thread (_, tid, _, _) -> tid;;
-
-(** Given a thread, returns its parent thread ID. *)
-let get_ptid = function
-  | Thread (_, _, ptid, _) -> ptid;;
-
 
 (** Given a thread ID and a list of threads, returns the thread in the list matching the ID
     passed as a parameter, or raises [Thread_not_found] if no thread ID matches the given one.
