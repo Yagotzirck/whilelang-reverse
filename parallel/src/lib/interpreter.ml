@@ -202,7 +202,7 @@ let rec sem_prg_rev curr_state =
         sem_stmt_rev curr_state;;
 
 
-(** Given a thread ID [tid], specified [num_steps] integer and a state [curr_state], let [remaining_stmts] be the number of statements 
+(** Given a thread ID [tid], a specified [num_steps] integer and a state [curr_state], let [remaining_stmts] be the number of statements 
     between the current statement in [tid]'s program and the [Program_end] / [Par_prg_end] boundary statement; then the function
     performs min([remaining_stmts], [num_steps]) statement evaluations in forward execution mode and returns the resulting state.
 
