@@ -1,0 +1,15 @@
+; Main program
+
+(executable
+  (name whilelang_par)
+  (modules Whilelang_par) 
+  (libraries lexer_parser par_interp print_state)
+)
+ 
+ ; Libraries
+ 
+(library
+  (name print_state)
+  (modules Print_state)
+  (libraries par_interp)
+)
