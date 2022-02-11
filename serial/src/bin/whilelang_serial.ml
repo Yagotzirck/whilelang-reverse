@@ -9,7 +9,7 @@ let rec exec_prg prg_state =
     match read_int_opt() with
   | Some steps -> steps
   | None ->
-      print_endline "The inserted value isn't a valid integer.";
+      Printf.eprintf "The inserted value isn't a valid integer.\n";
       read_steps()
   in
   print_string "\n\n\n\n\n";
