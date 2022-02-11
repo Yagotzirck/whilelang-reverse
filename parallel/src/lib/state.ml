@@ -158,10 +158,10 @@ let get_sigma = function
 
 
 (** Takes a program and an initial sigma store as parameters, and returns a state with
-    - A list of active threads initialized with a thread containing the given program;
+    - A list of active threads initialized with a root thread containing the given program;
     - An empty list of waiting threads;
     - [num_curr_stmt] initialized to [first_stmt_value];
-    - [num_curr_thread] initialized to [root_tid_value] + 1;W
+    - [num_curr_thread] initialized to [root_tid_value] + 1;
     - The given sigma store;
     - An empty auxiliary (delta) store.
 *)
