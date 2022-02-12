@@ -117,15 +117,10 @@ let rec exec_prg prg_state =
         try
           sem_prg_fwd_steps tid num_steps prg_state |> exec_prg
         with
-          | Thread.Thread_not_found -> Printf.eprintf "\nNo thread with the specified ID was found.\n%!"
+          | Thread.Thread_not_found -> Printf.eprintf "\nNo running thread with the specified ID was found.\n%!"
     ); exec_prg prg_state
 
-    | Reverse num_steps -> (
-        try
-          sem_prg_rev_steps num_steps prg_state |> exec_prg
-        with
-        | Thread.Thread_not_found -> Printf.eprintf "\nNo thread with the specified ID was found.\n%!"
-    ); exec_prg prg_state
+    | Reverse num_steps -> sem_prg_rev_steps num_steps prg_state |> exec_prg
 
     | Invalid_input err_msg ->
         Printf.eprintf "\nInvalid input: %s\n%!" err_msg;
