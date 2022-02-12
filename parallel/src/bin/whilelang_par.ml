@@ -101,7 +101,7 @@ let rec exec_prg prg_state =
                 State.get_waiting_thread tid prg_state |> Thread.get_program |> print_program
               with
                 (* If the thread wasn't found in the list of waiting threads either, print an error message *)
-                | Thread.Thread_not_found -> print_string "\nNo thread with the specified ID was found.\n"
+                | Thread.Thread_not_found -> Printf.eprintf "\nNo thread with the specified ID was found.\n%!"
     ); exec_prg prg_state
 
     | Print_state -> print_state prg_state; exec_prg prg_state
@@ -111,18 +111,18 @@ let rec exec_prg prg_state =
         try
           sem_prg_fwd_steps tid num_steps prg_state |> exec_prg
         with
-          | Thread.Thread_not_found -> print_string "\nNo thread with the specified ID was found.\n"
+          | Thread.Thread_not_found -> Printf.eprintf "\nNo thread with the specified ID was found.\n%!"
     ); exec_prg prg_state
 
     | Reverse num_steps -> (
         try
           sem_prg_rev_steps num_steps prg_state |> exec_prg
         with
-        | Thread.Thread_not_found -> print_string "\nNo thread with the specified ID was found.\n"
+        | Thread.Thread_not_found -> Printf.eprintf "\nNo thread with the specified ID was found.\n%!"
     ); exec_prg prg_state
 
     | Invalid_input err_msg ->
-        print_string ("\nInvalid input: " ^ err_msg ^ "\n");
+        Printf.eprintf "\nInvalid input: %s\n%!" err_msg;
         let _ = read_line() in ();  (* flush stdin, to get rid of any leftover input characters *)
         exec_prg prg_state;;
 
@@ -133,7 +133,7 @@ let open_arg_file =
       open_in filename
     
     | _ ->
-      print_string "Usage: whilelang_par <source file>\n";
+      Printf.eprintf "Usage: whilelang_par <source file>\n%!";
       exit 1;;
 let main =
   let in_ch = open_arg_file in
