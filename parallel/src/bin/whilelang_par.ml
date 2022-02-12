@@ -24,16 +24,21 @@ type cmd =
 let rec exec_prg prg_state =
   let read_char() =
     try
-      Scanf.scanf "%c" (fun x -> Char x)
+      Scanf.scanf " %c" (fun x -> Char x)
     with
       | Scanf.Scan_failure msg -> Char_error ("read_char error: " ^ msg)
   in
 
   let read_positive_int() =
-    match read_int_opt() with
-      | Some value when value >= 0 -> Int value
-      | Some _ -> Int_error "Negative value"
-      | None -> Int_error "Not an integer value"
+    try
+      let read_value = Scanf.scanf " %d" (fun x -> x) in
+      match read_value with
+      | value when value >= 0 -> Int value
+      | _ -> Int_error "read_positive_int error: Negative value"
+
+    with
+      | Scanf.Scan_failure msg -> Int_error ("read_positive_int error: " ^ msg)
+    
   in
 
   let print_help() =
@@ -48,6 +53,7 @@ let rec exec_prg prg_state =
 
   let read_cmd() =
     print_string "\n\nEnter a command (enter \"h\" for a list of available commands): ";
+    flush_all();
 
     match read_char()  with
       (* Print a thread program *)
@@ -123,7 +129,6 @@ let rec exec_prg prg_state =
 
     | Invalid_input err_msg ->
         Printf.eprintf "\nInvalid input: %s\n%!" err_msg;
-        let _ = read_line() in ();  (* flush stdin, to get rid of any leftover input characters *)
         exec_prg prg_state;;
 
     
@@ -146,6 +151,6 @@ let main =
 
       print_string "\n\n\n\n\n";
       print_state initial_state;
-      print_string "\n\n\n\n\n";
+      print_string "\n\n";
 
       exec_prg initial_state;;
