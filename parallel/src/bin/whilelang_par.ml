@@ -102,23 +102,23 @@ let rec exec_prg prg_state =
           State.get_running_thread tid prg_state |> Thread.get_program |> print_program
         with
             (* If the thread wasn't found in the list of running threads, search in the list of waiting threads *)
-          | Thread.Thread_not_found ->
+          | Thread.Thread_not_found _ ->
               try
                 State.get_waiting_thread tid prg_state |> Thread.get_program |> print_program
               with
                 (* If the thread wasn't found in the list of waiting threads either, print an error message *)
-                | Thread.Thread_not_found -> Printf.eprintf "\nNo thread with the specified ID was found.\n%!"
+                | Thread.Thread_not_found _ -> Printf.eprintf "\nNo thread with the specified ID was found.\n%!"
     ); exec_prg prg_state
 
     | Print_state -> print_state prg_state; exec_prg prg_state
     | Print_help -> print_help(); exec_prg prg_state
 
     | Forward (tid, num_steps) -> (
-        try
+        if State.is_thread_running tid prg_state then
           sem_prg_fwd_steps tid num_steps prg_state |> exec_prg
-        with
-          | Thread.Thread_not_found -> Printf.eprintf "\nNo running thread with the specified ID was found.\n%!"
-    ); exec_prg prg_state
+        else
+          Printf.eprintf "\nNo running thread with the specified ID was found.\n%!"; exec_prg prg_state
+    )
 
     | Reverse num_steps -> sem_prg_rev_steps num_steps prg_state |> exec_prg
 
