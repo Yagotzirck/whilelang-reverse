@@ -117,10 +117,17 @@ let csub ~e1 ~e2 ~state =
 
 
 let exec_par_fwd prg1 prg2 ptid state =
-  State.move_to_next_stmt ptid state |> State.set_thread_as_waiting ptid |> State.new_running_thread prg2 ptid Program.Right |> State.new_running_thread prg1 ptid Program.Left;;
+  State.move_to_next_stmt ptid state |>
+  State.set_thread_as_waiting ptid |>
+  State.new_running_thread prg2 ptid Program.Right |>
+  State.new_running_thread prg1 ptid Program.Left;;
 
 let exec_par_rev prg ptid state =
-  let adjusted_state = State.pop_prev_stmt_counter ptid state |> State.set_thread_as_waiting ptid |> State.dec_prev_par_finished_children ptid in
+  let adjusted_state = State.pop_prev_stmt_counter ptid state |>
+  State.set_thread_as_waiting ptid |>
+  State.dec_prev_par_finished_children ptid
+  in
+
   let num_last_stmt = (State.get_stmt_counter state) - 1 in
   
   match Program.get_last_executed_par_prg num_last_stmt prg with
@@ -191,7 +198,7 @@ let rec sem_prg_fwd tid curr_state =
     (*  Program reached its end; perform one more step to terminate the child thread (Par_prg_end),
         or reset num_threads if we're in the root thread (Program_end)
     *)
-    sem_stmt_fwd tid curr_state;; 
+        sem_stmt_fwd tid curr_state;;
 
 (** Given a state, evaluates all statements until the beginning of the program in reverse execution mode and returns the resulting state.*)
 let rec sem_prg_rev curr_state =
@@ -209,13 +216,19 @@ let rec sem_prg_rev curr_state =
     If [num_steps] <= 0, [curr_state] is returned unaltered.
 *)
 let rec sem_prg_fwd_steps tid num_steps curr_state =
-  if not (State.is_thread_at_end tid curr_state) && num_steps > 0 then
-    sem_prg_fwd_steps tid (num_steps - 1) (sem_stmt_fwd tid curr_state)
-  else
-    (*  Program reached its end; perform one more step to terminate the child thread (Par_prg_end),
+  if State.is_thread_running tid curr_state then (
+
+    if not (State.is_thread_at_end tid curr_state) && num_steps > 0 then
+      sem_prg_fwd_steps tid (num_steps - 1) (sem_stmt_fwd tid curr_state)
+    else
+      (*  Program reached its end; perform one more step to terminate the child thread (Par_prg_end),
         or reset num_threads if we're in the root thread (Program_end)
     *)
-        sem_stmt_fwd tid curr_state;; 
+        sem_stmt_fwd tid curr_state
+        
+  )
+  else
+    curr_state;;
 
 (** Given a specified [num_steps] integer and a state [curr_state], let [remaining_stmts] be the number of statements 
     between the current statement in [curr_state]'s program and the [Program_start] boundary statement; then the function
