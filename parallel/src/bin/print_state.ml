@@ -127,7 +127,7 @@ let print_state = function
     print_endline "========================= Current program state =========================\n";
 
       printf "\tnum_curr_stmt:\t\t%d\n" num_curr_stmt;
-      printf "\tnum_curr_thread:\t\t%d\n" num_curr_thread;
+      printf "\tnum_curr_thread:\t%d\n" num_curr_thread;
 
 
       print_endline "==================== Running threads (<id>, <ptid>, <branch>) ====================\n";
