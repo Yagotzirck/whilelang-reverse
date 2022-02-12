@@ -2,7 +2,8 @@
 
 open Ast_ann
 
-exception Thread_not_found;;
+(** The string argument indicates the function where the exception has occurred. *)
+exception Thread_not_found of string;;
 
 
 (** A thread is a tuple containing the following fields:
@@ -118,7 +119,7 @@ let pop_prev_stmt_counter = function
     passed as a parameter, or raises [Thread_not_found] if no thread ID matches the given one.
 *)
 let rec get_thread_from_list tid = function
-    | [] -> raise Thread_not_found
+    | [] -> raise (Thread_not_found __FUNCTION__)
     | Thread (prg, curr_tid, ptid, branch) :: _ when curr_tid = tid -> Thread (prg, curr_tid, ptid, branch)
     | _ :: t -> get_thread_from_list tid t;;
 
@@ -126,7 +127,7 @@ let rec get_thread_from_list tid = function
     passed as a parameter, or raises [Thread_not_found] if no thread ID matches the given one.
 *)
 let rec remove_thread_from_list tid = function
-    | [] -> raise Thread_not_found
+    | [] -> raise (Thread_not_found __FUNCTION__)
     | Thread (_, curr_tid, _, _) :: t when curr_tid = tid -> t
     | h :: t -> h :: remove_thread_from_list tid t;;
 
@@ -134,7 +135,7 @@ let rec remove_thread_from_list tid = function
     having the same ID as [thread] with [thread].
 *)
 let rec update_thread_in_list thread = function
-  | [] -> raise Thread_not_found
+  | [] -> raise (Thread_not_found __FUNCTION__)
   | Thread (_, curr_tid, _, _) :: t when curr_tid = (get_tid thread) -> thread :: t
   | h :: t -> h :: (update_thread_in_list thread t);;
 
@@ -174,3 +175,8 @@ let inc_prev_par_finished_children = function
 
 let dec_prev_par_finished_children = function
   | Thread (prg, curr_tid, ptid, branch) -> Thread (Program.dec_prev_par_finished_children prg, curr_tid, ptid, branch);;
+
+let rec is_thread_in_list tid = function
+  | [] -> false
+  | Thread (_, curr_tid, _, _) :: _ when curr_tid = tid -> true
+  | _ :: t -> is_thread_in_list tid t;;
