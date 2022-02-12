@@ -166,7 +166,7 @@ let get_sigma = function
     - An empty auxiliary (delta) store.
 *)
 let init prg sigma =
-  State ([(Thread.create prg root_tid_value root_tid_value Root)], [], first_stmt_value, root_tid_value + 1,  sigma, Delta.empty_delta);;
+  State ([(Thread.create prg root_tid_value 0 Root)], [], first_stmt_value, root_tid_value + 1,  sigma, Delta.empty_delta);;
 
 
 
@@ -371,7 +371,7 @@ let is_prg_at_start state =
   try
   get_prev_stmt root_tid_value state = Program_start
   with
-    | Thread.Thread_not_found -> false;;
+    | Thread.Thread_not_found _ -> false;;
 
 
 (** Given a thread ID and a state, returns a boolean value indicating whether the program
@@ -386,5 +386,10 @@ let is_thread_at_end tid state =
     active thread is the root thread (and therefore [num_threads] can be reset to the value
     coming after [root_tid_value], since it won't overlap with any existing threads' IDs.)
 *)
+
+let is_thread_running tid = function
+  | State (t_running, _, _, _, _, _) -> Thread.is_thread_in_list tid t_running;;
+
+
 let reset_num_threads = function
   | State (t_running, t_waiting, num_stmts, _, s, d) -> State (t_running, t_waiting, num_stmts, root_tid_value + 1, s, d);;
