@@ -154,13 +154,27 @@ let is_par_prg_at_end = function
   | Program_ann (_, Par_prg_end, _) -> true
   | _ -> false;;
 
-(** Handles the forward execution of statement {!val:Program_ann.Par_prg_end}
-    (that is, a child thread terminated its program execution) at program level.
+
+let inc_prev_par_finished_children = function
+  | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
+      Program_ann (Par (prg1, prg2, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
+  
+  | Program_ann _ -> raise Prev_stmt_not_Par;;
+
+let dec_prev_par_finished_children = function
+  | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
+      Program_ann (Par (prg1, prg2, num_chld_done - 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
+
+  | Program_ann _ -> raise Prev_stmt_not_Par;;
+
+(** Given a thread branch, a child program and a parent program whose previous statement is
+    a [Par] statement, puts the updated child program into the parent's [Par] statement.
 
 @param  chld_branch The child thread's branch ([Left] or [Right]) to determine whether the program contained in the child thread belongs
         to the first or the second program inside the {!val:Program_ann.Par} statement of the parent thread.
         If it's [Root], then an exception is raised.
-@param  t_parent The parent thread whose current statement is the [Par] statement to be updated with the finished child thread's program.
+@param chld_prg The updated child program to put into the parent program's [Par] statement.
+@param  t_parent The parent program whose previous statement is the [Par] statement to be updated with the finished child thread's program.
 
 @return The updated parent program.
 
@@ -168,21 +182,29 @@ let is_par_prg_at_end = function
 @raise  Prev_stmt_not_Par if the parent program's previous statement is not [Par].
 
 *)
-let update_par_prg_fwd ~chld_branch ~chld_prg ~parent_prg =
+let update_par_prg ~chld_branch ~chld_prg ~parent_prg =
   match (chld_branch, parent_prg) with
     (* The child thread is the root thread; unlikely to happen, but at least OCaml doesn't complain about inexhaustive pattern matching *)
     | (Root, Program_ann _) -> raise Root_thread_par_update 
 
     (* Update the first program in the parent thread program's Par() statement *)
     | (Left, Program_ann (Par(_, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ) ->
-      Program_ann (Par (chld_prg, prg2, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts)
+      Program_ann (Par (chld_prg, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts)
 
     (* Update the second program in the parent thread program's Par() statement *)
     | (Right, Program_ann (Par(prg1, _, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ) ->
-      Program_ann (Par (prg1, chld_prg, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts)
+      Program_ann (Par (prg1, chld_prg, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts)
     
     (* The previous statement in the parent thread program is not Par(); raise an exception *)
     | (_, Program_ann _) -> raise Prev_stmt_not_Par;;
+
+(** Handles the forward execution of statement {!val:Program_ann.Par_prg_end}
+    (that is, a child thread terminated its program execution) by calling {!val:update_par_prg}
+    and incrementing [Par]'s field [num_chld_done] by 1.
+*)
+let update_par_prg_fwd ~chld_branch ~chld_prg ~parent_prg =
+  update_par_prg chld_branch chld_prg parent_prg |> inc_prev_par_finished_children;;
+
 
 
 (** Given a waiting thread's program, returns a boolean value indicating whether its children
@@ -218,17 +240,4 @@ let get_last_executed_par_prg num_last_stmt = function
       else
         None
         
-  | Program_ann _ -> raise Prev_stmt_not_Par;;
-
-
-let inc_prev_par_finished_children = function
-  | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
-      Program_ann (Par (prg1, prg2, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
-  
-  | Program_ann _ -> raise Prev_stmt_not_Par;;
-
-let dec_prev_par_finished_children = function
-  | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
-      Program_ann (Par (prg1, prg2, num_chld_done - 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
-  
   | Program_ann _ -> raise Prev_stmt_not_Par;;

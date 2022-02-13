@@ -208,6 +208,11 @@ match state with
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (Thread.update_thread_in_list updated_thread t_running, t_waiting, num_stmts, num_threads, s, d);;
 
 
+(** This is a wrapper which applies {!val:Thread.get_child_threads_from_list} to the
+    running threads' list contained inside the specified state parameter.
+*)let get_child_threads_from_list ptid = function
+    | State (t_running, _, _, _, _, _) -> Thread.get_child_threads_from_list ptid t_running;;
+
 (** This is a wrapper which applies {!val:Thread.remove_child_threads_from_list} to the
     running threads' list contained inside the specified state parameter.
 *)
@@ -253,11 +258,17 @@ let adjust_state_for_rev_semantics state = match state with
           (* If the last executed thread wasn't found in the running threads' list, search in the list of waiting threads *)
           | None -> match Thread.get_last_executed_thread_from_list num_last_stmt t_waiting with
               (*  If the last executed thread is found in the waiting threads' list, it means that the last executed instruction
-                  was Par: the child threads must be removed and the waiting thread must be set as running
+                  was Par: the child threads must be removed after putting their programs back in Par, and the waiting thread must be set as running
               *)
-              | Some thread ->
-                let ptid = Thread.get_ptid thread in
-                remove_child_threads_from_list ptid state |> set_thread_as_running ptid
+              | Some parent_thread ->
+                let ptid = Thread.get_tid parent_thread in
+                let child_threads = get_child_threads_from_list ptid state in
+                
+                let updated_parent_thread =
+                  Thread.update_par_prg (fst child_threads) parent_thread |> Thread.update_par_prg (snd child_threads) in
+
+                remove_child_threads_from_list ptid state  |> remove_waiting_thread ptid |> add_running_thread updated_parent_thread
+
 
               (* If the thread wasn't found in the waiting threads' list either, search in the programs contained in waiting threads' Par statements *)
               | None -> match Thread.get_last_executed_par_prg_from_list num_last_stmt t_waiting with

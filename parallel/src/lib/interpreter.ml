@@ -137,8 +137,7 @@ let exec_par_rev prg ptid state =
     (* If the program wasn't found in the programs contained in Par program, raise an exception *)
     | None -> raise State.Last_executed_stmt_not_found;;
 
-
-
+  
 (** Given a thread ID and a state, performs a single evaluation step in forward execution mode
     in the program associated to the given thread ID, and returns the resulting state.
 *)
@@ -156,7 +155,7 @@ let sem_stmt_fwd (tid : int) (curr_state : State.state) : State.state =
 
     (* The following statement expressions aren't supposed to be encountered during forward execution *)
     | Program_start -> raise (Illegal_statement_fwd_execution "Program_start")
-    | Par_prg_start -> raise (Illegal_statement_fwd_execution "Par_prg_start")
+    | Par_prg_start -> raise (Illegal_statement_fwd_execution "Par_prg_start");;
 
   
 
@@ -177,7 +176,19 @@ let sem_stmt_rev (curr_state : State.state) : State.state =
     | Cadd (e1, e2, _) -> (csub e1 e2 adj_state) |> State.move_to_prev_stmt tid
     | Csub (e1, e2, _) -> (cadd e1 e2 adj_state) |> State.move_to_prev_stmt tid
 
-    | Par _ -> exec_par_rev (Thread.get_program last_executed_thread) tid adj_state
+    (* In this Par case, both children's programs are at the beginning;
+        all we have to do is moving to the previous statement, since everything else
+        ( putting the child threads' programs into the Par statement, killing the child threads
+          and putting the parent thread back in the running threads' list)
+        has alread been handled by the previous call to {!val: State.adjust_state_for_rev_semantics}.
+    *)
+    | Par (_, _, num_chld_done, _) when num_chld_done = 0 -> State.move_to_prev_stmt tid adj_state
+
+    (*  In this other Par case, we're effectively encountering the Par statement, and we must create the child thread
+        containing the program which terminated last between the two Par programs.
+    *)
+    | Par (_, _, num_chld_done, _) -> print_int num_chld_done; exec_par_rev (Thread.get_program last_executed_thread) tid adj_state
+    
     
     (* The following statement expressions aren't supposed to be encountered during reverse execution *)
     | Program_end -> raise (Illegal_statement_rev_execution "Program_end")
@@ -248,7 +259,7 @@ let rec sem_prg_fwd_steps tid num_steps curr_state =
       sem_stmt_rev curr_state
     else(
 
-    if not (State.is_prg_at_start curr_state) && num_steps > 0 then
+    if num_steps > 0 then
       sem_prg_rev_steps (num_steps -1) (sem_stmt_rev curr_state)
     else
       curr_state
