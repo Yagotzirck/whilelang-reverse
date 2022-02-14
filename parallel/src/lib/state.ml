@@ -242,6 +242,15 @@ let get_last_executed_thread state = match state with
       *)
       | None -> raise Last_executed_thread_not_found;;
 
+
+let inc_prev_par_finished_children tid state =
+  let updated_thread = get_waiting_thread tid state |> Thread.inc_prev_par_finished_children in
+    update_waiting_thread updated_thread state;;
+
+let dec_prev_par_finished_children tid state =
+  let updated_thread = get_waiting_thread tid state |> Thread.dec_prev_par_finished_children in
+    update_waiting_thread updated_thread state;;
+      
 let adjust_state_for_rev_semantics state = match state with
   | State (t_running, t_waiting, num_stmts, _, _, _) ->
 
@@ -273,7 +282,7 @@ let adjust_state_for_rev_semantics state = match state with
               (* If the thread wasn't found in the waiting threads' list either, search in the programs contained in waiting threads' Par statements *)
               | None -> match Thread.get_last_executed_par_prg_from_list num_last_stmt t_waiting with
                   (* If the program is found, create a thread containing the given program in the list of running threads *)
-                  | Some (prg, branch, ptid) -> new_running_thread prg ptid branch state
+                  | Some (prg, branch, ptid) -> new_running_thread prg ptid branch state |> dec_prev_par_finished_children ptid
 
                   (* If the thread wasn't found in the programs contained in waiting threads' Par statements, raise an exception *)
                   | None -> raise Last_executed_stmt_not_found;;
@@ -367,14 +376,6 @@ let handle_finished_par_thread_fwd ~tid ~state =
   
   remove_running_thread tid state |> remove_waiting_thread ptid |> add_updated_parent_thread updated_parent_thread;;
 
-
-let inc_prev_par_finished_children tid state =
-  let updated_thread = get_waiting_thread tid state |> Thread.inc_prev_par_finished_children in
-    update_waiting_thread updated_thread state;;
-
-let dec_prev_par_finished_children tid state =
-  let updated_thread = get_waiting_thread tid state |> Thread.dec_prev_par_finished_children in
-    update_waiting_thread updated_thread state;;
 
 (** Returns a boolean value indicating whether the program's current statement/instruction
     in the given [state] is the main program's first statement/instruction. *)
