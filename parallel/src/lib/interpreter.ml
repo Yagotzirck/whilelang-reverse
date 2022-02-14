@@ -124,11 +124,12 @@ let exec_par_fwd prg1 prg2 ptid state =
 
 let exec_par_rev prg ptid state =
   let adjusted_state = State.pop_prev_stmt_counter ptid state |>
+  State.dec_num_stmts |>
   State.set_thread_as_waiting ptid |>
   State.dec_prev_par_finished_children ptid
   in
 
-  let num_last_stmt = (State.get_stmt_counter state) - 1 in
+  let num_last_stmt = (State.get_stmt_counter adjusted_state) - 1 in
   
   match Program.get_last_executed_par_prg num_last_stmt prg with
     (* If the program is found, create a thread containing the given program in the list of running threads *)
@@ -187,7 +188,7 @@ let sem_stmt_rev (curr_state : State.state) : State.state =
     (*  In this other Par case, we're effectively encountering the Par statement, and we must create the child thread
         containing the program which terminated last between the two Par programs.
     *)
-    | Par (_, _, num_chld_done, _) -> print_int num_chld_done; exec_par_rev (Thread.get_program last_executed_thread) tid adj_state
+    | Par _ -> exec_par_rev (Thread.get_program last_executed_thread) tid adj_state
     
     
     (* The following statement expressions aren't supposed to be encountered during reverse execution *)
