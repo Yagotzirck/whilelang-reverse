@@ -18,6 +18,7 @@ type cmd =
   | Print_help
   | Forward of int * int      (* (<thread_id>, <num_steps>) *)
   | Reverse of int            (* (<num_steps>) *)
+  | Quit
   | Invalid_input of string;; (* (<err_msg>)*)
 
 
@@ -47,7 +48,8 @@ let rec exec_prg prg_state =
       "\tt <thread_id>               Print the program contained in the thread with the given ID\n" ^
       "\ts                           Print the program state\n" ^
       "\tf <thread_id> <num_steps>   Perform forward execution on the thread with the given ID for <num_steps> steps\n" ^
-      "\tr <num_steps>               Perform reverse execution for <num_steps> steps\n"
+      "\tr <num_steps>               Perform reverse execution for <num_steps> steps\n" ^
+      "\tq                           Quit\n"
     )
   in
 
@@ -84,6 +86,9 @@ let rec exec_prg prg_state =
 
       (* Print help (a list of available commands) *)
       | Char 'h' -> Print_help
+
+      (* Quit *)
+      | Char 'q' -> Quit
       
       (* Unrecognized command *)
       | Char _ -> Invalid_input "Unrecognized command"
@@ -121,6 +126,8 @@ let rec exec_prg prg_state =
     )
 
     | Reverse num_steps -> sem_prg_rev_steps num_steps prg_state |> exec_prg
+
+    | Quit -> exit 0
 
     | Invalid_input err_msg ->
         Printf.eprintf "\nInvalid input: %s\n%!" err_msg;
