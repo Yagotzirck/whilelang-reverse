@@ -9,9 +9,7 @@ exception Thread_not_found of string;;
 (** A thread is a tuple containing the following fields:
 
   + [prg]:            The annotated program associated to the thread;
-  + [tid]:            An integer value that uniquely identifies the thread.
-                      The value is released and usable for new threads as soon
-                      as the thread terminates;
+  + [tid]:            An integer value that uniquely identifies the thread;
   + [ptid]:           An integer value that identifies the parent thread's ID
                       (that is, the [tid] of the thread that generated this thread);
   + [branch]:         A variable of type [child_branch], indicating whether the thread is

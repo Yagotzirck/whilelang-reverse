@@ -26,11 +26,15 @@ let rec ann_prg_in_par (prg : program) : program_ann =
 
 (** Annotates a statement.
 
-    An int list (which will keep track of statements' execution order) is added to each statement
-    (except for the [Par] statement); as for the [Par] statement, the statements contained in its two
-    program blocks will be recursively annotated as well, and [Par_prg_start] - [Par_prg_end] statements
-    are added at the beginning and at the end of the program respectively,
-    in order to define the programs' boundaries.
+    An int list (which will keep track of statements' execution order) is added to each statement.
+
+    As for the [Par] statement:
+    - In addition to the previously mentioned int list added to all statements, an int scalar
+      to keep track of the number of child threads which finished the execution of the
+      programs inside the [Par] statement is added as well;
+    - The statements contained in its two program blocks will be recursively annotated as well,
+      and [Par_prg_start] - [Par_prg_end] statements are added at the beginning and at the end
+      of the program respectively, in order to define the programs' boundaries.
 
 @param s The statement to be annotated.
 @return The annotated statement.

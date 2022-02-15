@@ -25,5 +25,5 @@ stmt =
   | Cadd of int_expr * int_expr (** Constructive assignment ("+="); must check about 1st int_expr being a Val *)
   | Csub of int_expr * int_expr (** Constructive assignment ("-="); must check about 1st int_expr being a Val *)
 
-  (* Parallel execution of two programs *)
-  | Par of program * program;;
+  | Par of program * program (** Parallel execution of two programs *)
+;;

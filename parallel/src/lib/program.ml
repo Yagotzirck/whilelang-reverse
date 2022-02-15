@@ -69,7 +69,7 @@ let get_curr_stmt = function
 
 (** Given an int value [stmt_counter] representing the current statement counter and a program [prg],
     pushes [stmt_counter] onto the source code stack associated to [prg]'s current instruction.
-@raises Statement_without_stack if the current instruction doesn't have an associated source code stack.
+@raise Statement_without_stack if the current instruction doesn't have an associated source code stack.
 *)
 let push_stmt_counter stmt_counter prg =
   let push_inner = function

@@ -11,10 +11,12 @@ exception Last_executed_thread_not_found;;
     + waiting_threads (the list of threads that generated the threads in [running_threads],
       waiting for their children to finish their execution before resuming their own execution
       by moving back to [running_threads];
-    + num_curr_stmt (an integer counting the number of statements executed so far, used to annotate
-      statements as they are executed);
-    + num_curr_thread (an integer counting the number of active threads (both running and waiting), used
-      to assign an ID to each thread upon creation);
+    + num_curr_stmt: an integer counting the number of statements executed so far, used to annotate
+      statements as they are executed;
+    + num_curr_thread: an integer counting the number of created threads (both active and killed), used
+      to assign an ID to each thread upon creation; whenever the root thread reaches its program's last
+      statement (or the first one, if in reverse execution), this value is reset to the initial value
+      ({!val:root_tid_value} + 1, that is.)
     + The program store (sigma);
     + The auxiliary store (delta).
 *)
@@ -23,7 +25,7 @@ type state = State of Thread.thread list * Thread.thread list * int * int * Sigm
 (** Value used to initialize state's [num_curr_stmt] value. *)
 let first_stmt_value = 1;;
 
-(** Value used to initialize state's [num_curr_thread] value. *)
+(** Value used to set the root thread ID, and to initialize state's [num_curr_thread] value ([root_tid_value] + 1).  *)
 let root_tid_value = 1;;   (* Root thread ID *)
 
 
