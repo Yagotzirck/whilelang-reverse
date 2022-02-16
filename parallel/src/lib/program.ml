@@ -68,8 +68,8 @@ let get_curr_stmt = function
 
 
 (** Given an int value [stmt_counter] representing the current statement counter and a program [prg],
-    pushes [stmt_counter] onto the source code stack associated to [prg]'s current instruction.
-@raise Statement_without_stack if the current instruction doesn't have an associated source code stack.
+    pushes [stmt_counter] onto the source code stack associated to [prg]'s current statement.
+@raise Statement_without_stack if the current statement doesn't have an associated source code stack.
 *)
 let push_stmt_counter stmt_counter prg =
   let push_inner = function
@@ -90,7 +90,13 @@ let push_stmt_counter stmt_counter prg =
   match prg with
     | Program_ann (prev_stmts, curr_stmt, next_stmts) -> Program_ann (prev_stmts, push_inner curr_stmt, next_stmts);;
 
-  
+
+(** Given a program [prg], returns the statement counter value located
+    on the top of the source code stack associated to [prg]'s previous statement.
+@raise Statement_without_stack if the current statement doesn't have an associated source code stack.
+@raise Statement_empty_stack if the previous statement's source code stack is empty.
+@raise No_previous_statements if there are no statements preceding the current statement.
+*)
   let top_prev_stmt_counter prg =
     let top_inner = function
     | Program_start -> raise (Statement_without_stack "Program_start")
@@ -119,34 +125,39 @@ let push_stmt_counter stmt_counter prg =
     | Program_ann ([], _, _) -> raise No_previous_statements
     | Program_ann ( h_prev :: _, _, _) -> top_inner h_prev;;
 
-  
-    let pop_prev_stmt_counter prg =
-      let pop_inner = function
-      | Program_start -> raise (Statement_without_stack "Program_start")
-      | Program_end -> raise (Statement_without_stack "Program_end")
-      | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
-      | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
+(** Given a program [prg], pops (removes) the statement counter value from the top
+    of the source code stack associated to [prg]'s previous statement.
+@raise Statement_without_stack if the current statement doesn't have an associated source code stack.
+@raise Statement_empty_stack if the previous statement's source code stack is empty.
+@raise No_previous_statements if there are no statements preceding the current statement.
+*)
+let pop_prev_stmt_counter prg =
+  let pop_inner = function
+    | Program_start -> raise (Statement_without_stack "Program_start")
+    | Program_end -> raise (Statement_without_stack "Program_end")
+    | Par_prg_start -> raise (Statement_without_stack "Par_prg_start")
+    | Par_prg_end -> raise (Statement_without_stack "Par_prg_end")
 
-  
-      | Skip [] -> raise (Statement_empty_stack "Skip")
-      | Skip (_ :: t) -> Skip t
-  
-      | Assign (_, _, []) -> raise (Statement_empty_stack "Assign")
-      | Assign (e1, e2, _ :: t) -> Assign (e1, e2, t)
-  
-      | Cadd (_, _, []) -> raise (Statement_empty_stack "Cadd")
-      | Cadd (e1, e2, _ :: t) -> Cadd (e1, e2, t)
-  
-      | Csub (_, _, []) -> raise (Statement_empty_stack "Csub")
-      | Csub (e1, e2, _ :: t) -> Csub (e1, e2, t)
 
-      | Par (_, _, _, []) -> raise (Statement_empty_stack "Par")
-      | Par (prg1, prg2, num_chld_done, _ :: t) -> Par (prg1, prg2, num_chld_done, t)
-  
-    in
-    match prg with
-      | Program_ann ([], _, _) -> raise No_previous_statements
-      | Program_ann ( h_prev :: t_prev, curr, next) -> Program_ann ( (pop_inner h_prev) :: t_prev, curr, next);;
+    | Skip [] -> raise (Statement_empty_stack "Skip")
+    | Skip (_ :: t) -> Skip t
+
+    | Assign (_, _, []) -> raise (Statement_empty_stack "Assign")
+    | Assign (e1, e2, _ :: t) -> Assign (e1, e2, t)
+
+    | Cadd (_, _, []) -> raise (Statement_empty_stack "Cadd")
+    | Cadd (e1, e2, _ :: t) -> Cadd (e1, e2, t)
+
+    | Csub (_, _, []) -> raise (Statement_empty_stack "Csub")
+    | Csub (e1, e2, _ :: t) -> Csub (e1, e2, t)
+
+    | Par (_, _, _, []) -> raise (Statement_empty_stack "Par")
+    | Par (prg1, prg2, num_chld_done, _ :: t) -> Par (prg1, prg2, num_chld_done, t)
+
+  in
+  match prg with
+    | Program_ann ([], _, _) -> raise No_previous_statements
+    | Program_ann ( h_prev :: t_prev, curr, next) -> Program_ann ( (pop_inner h_prev) :: t_prev, curr, next);;
 
     
 (** Given a program, returns [true] if the current statement is [Par_prg_end], [false] otherwise. *)
@@ -154,13 +165,21 @@ let is_par_prg_at_end = function
   | Program_ann (_, Par_prg_end, _) -> true
   | _ -> false;;
 
-
+(** Given a program having [Par] as the previous statement, increases [num_chld_done] field contained
+    in the aforementioned [Par] statement by 1.
+    Called whenever a new child thread associated to said [Par] statement is created.
+*)
 let inc_prev_par_finished_children = function
   | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
       Program_ann (Par (prg1, prg2, num_chld_done + 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
   
   | Program_ann _ -> raise Prev_stmt_not_Par;;
 
+(** Given a program having [Par] as the previous statement, increases [num_chld_done] field contained
+    in the aforementioned [Par] statement by 1.
+    Called whenever a child thread associated to said [Par] statement terminates.
+@raise Prev_stmt_not_Par if the previous statement in the given program parameter is not [Par].
+*)
 let dec_prev_par_finished_children = function
   | Program_ann (Par (prg1, prg2, num_chld_done, stmt_stk) :: prev_stmts, curr_stmt, next_stmts ) ->
       Program_ann (Par (prg1, prg2, num_chld_done - 1, stmt_stk) :: prev_stmts, curr_stmt, next_stmts )
@@ -170,11 +189,11 @@ let dec_prev_par_finished_children = function
 (** Given a thread branch, a child program and a parent program whose previous statement is
     a [Par] statement, puts the updated child program into the parent's [Par] statement.
 
-@param  chld_branch The child thread's branch ([Left] or [Right]) to determine whether the program contained in the child thread belongs
+@param  chld_branch The child thread's branch ([Left] or [Right]), to determine whether the program contained in the child thread belongs
         to the first or the second program inside the {!val:Program_ann.Par} statement of the parent thread.
         If it's [Root], then an exception is raised.
 @param chld_prg The updated child program to put into the parent program's [Par] statement.
-@param  t_parent The parent program whose previous statement is the [Par] statement to be updated with the finished child thread's program.
+@param  t_parent The parent program whose previous statement is the [Par] statement to update with the finished child thread's program.
 
 @return The updated parent program.
 
@@ -227,8 +246,9 @@ let is_children_execution_done = function
 
 (** Given an int value representing the last statement's execution counter and
     a program whose previous statement is [Par], returns a pair [Some (prg, branch)]
-    if the [Par statement] contains the last executed instruction in one of its two programs
+    if the [Par statement] contains the last executed statement in one of its two programs
     (indicated by [branch]), [None] otherwise.
+@raise  Prev_stmt_not_Par if the given program's previous statement is not [Par].
 *)
 let get_last_executed_par_prg num_last_stmt = function
   | Program_ann (Par (prg1, prg2, _, _) :: _, _, _) ->

@@ -115,13 +115,28 @@ let csub ~e1 ~e2 ~state =
 
 
 
+(** Evaluates the [Par] statement in forward execution mode.
 
+    After annotating the [Par] statement with the current statement counter,
+    the thread where the [Par] statement has been encountered is moved to the list
+    of waiting threads and two new child threads (each containing a program taken from the
+    [Par] statement) are created in the list of running threads: the resulting state is
+    returned.
+*)
 let exec_par_fwd prg1 prg2 ptid state =
   State.move_to_next_stmt ptid state |>
   State.set_thread_as_waiting ptid |>
   State.new_running_thread prg2 ptid Program.Right |>
   State.new_running_thread prg1 ptid Program.Left;;
 
+
+(** Evaluates the [Par] statement in reverse execution mode.
+
+    Basically, what's happening here is that the thread where the
+    [Par] statement has been encountered is moved back to the waiting threads,
+    and the child thread which terminated last is re-created by
+    retrieving its program from the [Par] statement itself.
+*)
 let exec_par_rev prg ptid state =
   let adjusted_state = State.pop_prev_stmt_counter ptid state |>
   State.dec_num_stmts |>
