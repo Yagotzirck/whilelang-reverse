@@ -58,6 +58,7 @@ let update_par_prg t_chld t_parent =
   match t_parent with
     | Thread (prg, tid, ptid, branch) -> Thread (Program.update_par_prg (get_child_branch t_chld) (get_program t_chld) prg, tid, ptid, branch);;
 
+(** Same as {!val:update_par_prg}, but additionally increments [Par]'s [num_chld_done] field in the parent program by 1.*)
 let update_par_prg_fwd t_chld t_parent =
   match t_parent with
     | Thread (prg, tid, ptid, branch) -> Thread (Program.update_par_prg_fwd (get_child_branch t_chld) (get_program t_chld) prg, tid, ptid, branch);;
@@ -189,13 +190,21 @@ let rec remove_child_threads_from_list ptid = function
   | h :: t when get_ptid h = ptid -> remove_child_threads_from_list ptid t
   | h :: t -> h :: remove_child_threads_from_list ptid t;;
 
-
+(** This is a wrapper which applies {!val:Program.inc_prev_par_finished_children} to the program contained inside the specified
+    thread parameter.
+*)
 let inc_prev_par_finished_children = function
   | Thread (prg, curr_tid, ptid, branch) -> Thread (Program.inc_prev_par_finished_children prg, curr_tid, ptid, branch);;
 
+(** This is a wrapper which applies {!val:Program.dec_prev_par_finished_children} to the program contained inside the specified
+    thread parameter.
+*)
 let dec_prev_par_finished_children = function
   | Thread (prg, curr_tid, ptid, branch) -> Thread (Program.dec_prev_par_finished_children prg, curr_tid, ptid, branch);;
 
+(** Given a thread ID and a list of threads, returns [true] if a thread having as ID the same value specified in the
+    parameter is found inside the list, [false] otherwise.
+*)
 let rec is_thread_in_list tid = function
   | [] -> false
   | Thread (_, curr_tid, _, _) :: _ when curr_tid = tid -> true

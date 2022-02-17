@@ -171,13 +171,6 @@ let init prg sigma =
   State ([(Thread.create prg root_tid_value 0 Root)], [], first_stmt_value, root_tid_value + 1,  sigma, Delta.empty_delta);;
 
 
-
-
-(* prepend_stmt and append_stmt removed *)
-
-
-
-
 (** This is a wrapper which applies {!val:Thread.prev_stmt} to the thread having the
     specified running thread ID contained inside the specified state parameter, and returns the resulting state.
 *)
@@ -221,7 +214,11 @@ match state with
 let remove_child_threads_from_list ptid = function
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (Thread.remove_child_threads_from_list ptid t_running, t_waiting, num_stmts, num_threads, s, d);;
 
-
+(** Given a state, searches the thread which performed the last statement execution
+    among the running threads and returns it.
+@raise  Last_executed_thread_not_found if no thread among the running threads performed the
+        last execution.
+*)
 let get_last_executed_thread state = match state with
   | State (t_running, _, num_stmts, _, _, _) ->
 
@@ -244,15 +241,37 @@ let get_last_executed_thread state = match state with
       *)
       | None -> raise Last_executed_thread_not_found;;
 
-
+(** Given a waiting thread ID whose program's previous statement is [Par] and a state, increments
+    [Par]'s [num_chld_done] field by 1.
+*)
 let inc_prev_par_finished_children tid state =
   let updated_thread = get_waiting_thread tid state |> Thread.inc_prev_par_finished_children in
     update_waiting_thread updated_thread state;;
 
+(** Given a waiting thread ID whose program's previous statement is [Par] and a state, decrements
+    [Par]'s [num_chld_done] field by 1.
+*)
 let dec_prev_par_finished_children tid state =
   let updated_thread = get_waiting_thread tid state |> Thread.dec_prev_par_finished_children in
     update_waiting_thread updated_thread state;;
-      
+
+    
+(** Given a state, returns an adjusted state to use before performing a single step in reverse execution mode,
+    so that {!val:get_last_executed_thread} is guaranteed to find the thread which executed last among
+    the running threads:
+
+    - If the state's current statement is the first one in the root thread, or the last executed statement is
+      in a thread which is running already, then no adjustment is necessary (the state is returned as-is);
+    - If the last executed statement is in the waiting threads, it means that the last executed instruction
+      was [Par]: the child threads which have just been created as a result of the [Par] statement execution
+      must be removed after putting their programs back in Par (in order to guarantee that [Par]'s programs are
+      "rewound" back to the beginning), and the waiting thread must be moved back to the running threads' list;
+    - If the last executed statement is found inside one of the programs contained inside a waiting thread's [Par]
+      statement, it means a child thread has terminated in the previous statement execution: another thread is created
+      in the running threads, containing the program found inside the waiting thread's [Par] statement.
+@raise Last_executed_stmt_not_found if the last executed statement couldn't be found anywhere.
+
+*)
 let adjust_state_for_rev_semantics state = match state with
   | State (t_running, t_waiting, num_stmts, _, _, _) ->
 
@@ -307,6 +326,15 @@ let inc_num_threads = function
 let dec_num_threads = function
   | State (t_running, t_waiting, num_stmts, num_threads, s, d) -> State (t_running, t_waiting, num_stmts, num_threads - 1, s, d);;
 
+(** Given a state, resets the [num_threads] value to the initial value.
+    Used when the program execution reaches the end in forward execution mode or
+    the beginning in reverse execution mode, since at those points we know the only
+    active thread is the root thread (and therefore [num_threads] can be reset to the value
+    coming after [root_tid_value], since it won't overlap with any existing threads' IDs.)
+*)
+let reset_num_threads = function
+  | State (t_running, t_waiting, num_stmts, _, s, d) -> State (t_running, t_waiting, num_stmts, root_tid_value + 1, s, d);;
+
 (** Given a thread ID and a state, performs the following operations:
 
   + Pushes the statement counter onto the current statement's source code stack;
@@ -338,8 +366,8 @@ let move_to_prev_stmt tid state =
       program, by calling {!val:Thread.update_par_prg_fwd};
     + The child thread is removed from the running threads (since it terminated its execution);
     + The parent thread is removed from the waiting threads (since it must be replaced by the updated version);
-    + The updated parent thread is added to the state; if all its child threads finished their execution, the parent thread
-      is placed in the running threads' list and its current program statement advances to the next one, otherwise it's placed
+    + The updated parent thread is added to the state; if all of its child threads finished their execution, the parent thread
+      is placed in the running threads' list and its current program statement advances to the next statement, otherwise it's placed
       in the waiting threads' list.
     
 
@@ -394,16 +422,8 @@ let is_thread_at_end tid state =
   let curr_stmt = get_curr_stmt tid state in
   curr_stmt = Par_prg_end || curr_stmt = Program_end;;
 
-(** Given a state, resets the [num_threads] value to the initial value.
-    Used when the program execution reaches the end in forward execution mode or
-    the beginning in reverse execution mode, since at those points we know the only
-    active thread is the root thread (and therefore [num_threads] can be reset to the value
-    coming after [root_tid_value], since it won't overlap with any existing threads' IDs.)
+(** Given a thread ID and a state, returns [true] if a thread with the given ID is found
+    in the running threads' list, [false] otherwise.
 *)
-
 let is_thread_running tid = function
   | State (t_running, _, _, _, _, _) -> Thread.is_thread_in_list tid t_running;;
-
-
-let reset_num_threads = function
-  | State (t_running, t_waiting, num_stmts, _, s, d) -> State (t_running, t_waiting, num_stmts, root_tid_value + 1, s, d);;
