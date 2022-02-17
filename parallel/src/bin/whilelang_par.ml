@@ -46,7 +46,7 @@ let rec exec_prg prg_state =
     print_string (
       "List of available commands:\n\n" ^
       "\tt <thread_id>               Print the program contained in the thread with the given ID\n" ^
-      "\ts                           Print the program state\n" ^
+      "\ts                           Print state info\n" ^
       "\tf <thread_id> <num_steps>   Perform forward execution on the thread with the given ID for <num_steps> steps\n" ^
       "\tr <num_steps>               Perform reverse execution for <num_steps> steps\n" ^
       "\tq                           Quit\n"
